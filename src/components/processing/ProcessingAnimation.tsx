@@ -160,14 +160,10 @@ interface ProcessingStatusProps {
   message: string;
 }
 
+/** Types `message` out one character at a time. Callers remount it (via `key`) to restart. */
 export function ProcessingStatus({ progress, message }: ProcessingStatusProps) {
   const [displayedMessage, setDisplayedMessage] = useState('');
   const [charIndex, setCharIndex] = useState(0);
-
-  useEffect(() => {
-    setDisplayedMessage('');
-    setCharIndex(0);
-  }, [message]);
 
   useEffect(() => {
     if (charIndex < message.length) {

@@ -103,6 +103,9 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// The hook belongs with the context it reads; moving it to its own file would only relocate the
+// same non-component export, so fast refresh is opted out of here instead.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAccessibility() {
   const context = useContext(AccessibilityContext);
   if (!context) {
