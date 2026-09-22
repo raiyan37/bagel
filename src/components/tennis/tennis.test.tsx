@@ -56,6 +56,23 @@ describe('PovVideo', () => {
     rerender(<PovVideo src="/pov.mp4" mainTime={3.1} isPlaying={false} label="pov" />);
     expect(pause).toHaveBeenCalledTimes(1);
   });
+
+  it('re-syncs when the clip source changes while paused', () => {
+    const { rerender } = render(<PovVideo src="/a.mp4" mainTime={0} isPlaying={false} label="pov" />);
+    const video = screen.getByLabelText('pov') as HTMLVideoElement;
+    let time = 0;
+    const paused = true;
+    Object.defineProperty(video, 'currentTime', { configurable: true, get: () => time, set: (v: number) => { time = v; } });
+    Object.defineProperty(video, 'paused', { configurable: true, get: () => paused });
+
+    rerender(<PovVideo src="/a.mp4" mainTime={5} isPlaying={false} label="pov" />);
+    expect(time).toBe(5);
+
+    // Swapping the source resets the media element to frame 0; the effect has to seek it back.
+    time = 0;
+    rerender(<PovVideo src="/b.mp4" mainTime={5} isPlaying={false} label="pov" />);
+    expect(time).toBe(5);
+  });
 });
 
 describe('PovOverlay', () => {

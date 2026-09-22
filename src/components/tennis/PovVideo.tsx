@@ -13,6 +13,8 @@ interface PovVideoProps {
 export function PovVideo({ src, mainTime, isPlaying, label, className }: PovVideoProps) {
   const ref = useRef<HTMLVideoElement>(null);
 
+  // `src` is a dependency because swapping the source resets the element to frame 0 and pauses it,
+  // which has to be corrected even when neither the clock nor the play state moved.
   useEffect(() => {
     const video = ref.current;
     if (!video) return;
@@ -24,7 +26,7 @@ export function PovVideo({ src, mainTime, isPlaying, label, className }: PovVide
     } else if (!isPlaying && !video.paused) {
       video.pause();
     }
-  }, [mainTime, isPlaying]);
+  }, [src, mainTime, isPlaying]);
 
   return <video ref={ref} className={className} src={src} muted playsInline preload="auto" aria-label={label} />;
 }
