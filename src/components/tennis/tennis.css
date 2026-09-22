@@ -1,0 +1,215 @@
+/* Tennis scoreboard, free-camera panel and small overrides (glass style from the soccer UI). */
+
+.tennis-score {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+}
+
+.tennis-score-glass {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+}
+
+.tennis-score-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 22px;
+}
+
+.tennis-score-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tennis-score-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.tennis-score-name {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.tennis-score-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 20px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tennis-score-value {
+  font-family: 'Geist Mono', monospace;
+  font-size: 22px;
+  font-weight: 300;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.tennis-score-label {
+  margin-top: 4px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Player cards are buttons for keyboard access; strip native button chrome. */
+button.player-card {
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+button.player-card:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+}
+
+/* Stream-page buttons next to Back / POV */
+.freecam-button {
+  position: absolute;
+  top: 28px;
+  left: 192px;
+  z-index: 100;
+  padding: 8px 14px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.freecam-button:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Free camera panel */
+.freecam {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.freecam-panel {
+  width: min(1200px, 92vw);
+  height: min(760px, 86vh);
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.freecam-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.freecam-title {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  color: #fff;
+}
+
+.freecam-tabs {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+
+.freecam-tabs button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font: inherit;
+  cursor: pointer;
+}
+
+.freecam-tabs button[aria-selected='true'] {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.freecam-link {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.freecam-frame,
+.freecam-video {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: #0a0a0a;
+  object-fit: contain;
+}
+
+.freecam-hint {
+  margin: 0;
+  padding: 8px 16px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Loading / error states */
+.stream-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 100vh;
+  font-family: 'Geist Mono', monospace;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.games-empty {
+  padding: 48px 24px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
