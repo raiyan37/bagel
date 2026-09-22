@@ -94,6 +94,15 @@ def test_resolve_falls_back_when_gemini_box_is_on_the_wrong_half():
     assert len(identity.warnings) == 1
 
 
+def test_resolve_rejects_gemini_box_on_the_ball_kid():
+    cam, dets = scene_detections()
+    boxes = {"near": dets.frames[0][2].bbox, "far": dets.frames[0][1].bbox}
+    identity = identify.resolve_identity(sample_analysis(), boxes, dets, cam)
+    assert identity.players["near"].track_id == 5 and identity.players["near"].source == "heuristic"
+    assert identity.players["far"].track_id == 9 and identity.players["far"].source == "gemini"
+    assert len(identity.warnings) == 1
+
+
 def test_run_tool_loop_executes_calls_and_submits_outputs():
     first = {
         "status": "REQUIRES_ACTION",

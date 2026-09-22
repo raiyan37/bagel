@@ -103,8 +103,8 @@ def match_box(box, candidates: list[Detection], width: int, height: int) -> Dete
     return nearest if distance(nearest) <= 0.15 * float(np.hypot(width, height)) else None
 
 
-def heuristic_tracks(detections: Detections, camera: PinholeCamera) -> dict[str, int | None]:
-    """Most persistent track per court half; tracks whose median position is outside the court width count half."""
+def _track_court_stats(detections: Detections, camera: PinholeCamera) -> dict[int, dict]:
+    """Per-track ground positions, statures and median court xy, shared by heuristic_tracks and resolve_identity."""
     positions: dict[int, list[tuple[float, float]]] = {}
     statures: dict[int, list[float]] = {}
     for frame in detections.frames:
@@ -114,21 +114,37 @@ def heuristic_tracks(detections: Detections, camera: PinholeCamera) -> dict[str,
                 continue
             positions.setdefault(det.track_id, []).append(xy)
             statures.setdefault(det.track_id, []).append(camera.height_above_ground(xy, det.bbox[1]))
+    stats: dict[int, dict] = {}
+    for track_id, xys in positions.items():
+        arr = np.array(xys)
+        stats[track_id] = {
+            "positions": xys,
+            "statures": statures[track_id],
+            "median": (float(np.median(arr[:, 0])), float(np.median(arr[:, 1]))),
+        }
+    return stats
+
+
+def _heuristic_tracks_from_stats(stats: dict[int, dict]) -> dict[str, int | None]:
     result: dict[str, int | None] = {}
     for role in ROLES:
         best_id, best_score = None, -1.0
-        for track_id, xys in positions.items():
-            arr = np.array(xys)
-            median = (float(np.median(arr[:, 0])), float(np.median(arr[:, 1])))
+        for track_id, track in stats.items():
+            median = track["median"]
             if not on_half(role, median):
                 continue
-            count = sum(on_half(role, xy) for xy in xys)
+            count = sum(on_half(role, xy) for xy in track["positions"])
             weight = 1.0 if abs(median[0]) <= HALF_DOUBLES + 0.5 else 0.5
-            score = count * weight + 0.01 * float(np.median(statures[track_id]))
+            score = count * weight + 0.01 * float(np.median(track["statures"]))
             if score > best_score:
                 best_id, best_score = track_id, score
         result[role] = best_id
     return result
+
+
+def heuristic_tracks(detections: Detections, camera: PinholeCamera) -> dict[str, int | None]:
+    """Most persistent track per court half; tracks whose median position is outside the court width count half."""
+    return _heuristic_tracks_from_stats(_track_court_stats(detections, camera))
 
 
 @dataclass
@@ -180,7 +196,8 @@ def resolve_identity(
     analysis: ClipAnalysis, boxes: dict, detections: Detections, camera: PinholeCamera, frame_index: int = 0
 ) -> Identity:
     warnings: list[str] = []
-    fallback = heuristic_tracks(detections, camera)
+    stats = _track_court_stats(detections, camera)
+    fallback = _heuristic_tracks_from_stats(stats)
     candidates = detections.frames[frame_index] if frame_index < len(detections.frames) else []
     used: set[int] = set()
     players: dict[str, PlayerIdentity] = {}
@@ -191,10 +208,13 @@ def resolve_identity(
         if box is not None:
             free = [d for d in candidates if d.track_id not in used]
             det = match_box(box, free, detections.width, detections.height)
+            median_x = stats[det.track_id]["median"][0] if det is not None and det.track_id in stats else None
             if det is None:
                 warnings.append(f"{role}: Gemini box matched no tracked person on frame {frame_index}")
             elif not on_half(role, court_xy(camera, det.foot)):
                 warnings.append(f"{role}: Gemini picked track {det.track_id}, which is not on the {role} half")
+            elif median_x is not None and abs(median_x) > HALF_DOUBLES + 0.5:
+                warnings.append(f"{role}: Gemini picked track {det.track_id}, which stays outside the court width")
             else:
                 track_id, source = det.track_id, "gemini"
         if track_id is None and fallback[role] not in used:
