@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MATCHES_ROOT, assetUrl } from '../lib/match';
 import type { MatchIndex, MatchManifest, MatchSummary, TracksFile } from '../lib/match';
 
@@ -14,8 +14,15 @@ interface MatchData {
   error: string | null;
 }
 
+/** Stored state tagged with the match it was loaded for, so a stale match is never served. */
+interface LoadedMatch extends MatchData {
+  id: string | undefined;
+}
+
+const NOTHING_LOADED: MatchData = { manifest: null, tracks: null, error: null };
+
 export function useMatchData(matchId: string | undefined): MatchData {
-  const [data, setData] = useState<MatchData>({ manifest: null, tracks: null, error: null });
+  const [loaded, setLoaded] = useState<LoadedMatch>({ id: undefined, ...NOTHING_LOADED });
 
   useEffect(() => {
     if (!matchId) return;
@@ -24,9 +31,11 @@ export function useMatchData(matchId: string | undefined): MatchData {
       try {
         const manifest = await fetchJson<MatchManifest>(assetUrl(matchId, 'manifest.json'));
         const tracks = await fetchJson<TracksFile>(assetUrl(matchId, manifest.tracks));
-        if (!cancelled) setData({ manifest, tracks, error: null });
+        if (!cancelled) setLoaded({ id: matchId, manifest, tracks, error: null });
       } catch (err) {
-        if (!cancelled) setData({ manifest: null, tracks: null, error: err instanceof Error ? err.message : String(err) });
+        if (!cancelled) {
+          setLoaded({ id: matchId, manifest: null, tracks: null, error: err instanceof Error ? err.message : String(err) });
+        }
       }
     };
     void load();
@@ -35,7 +44,15 @@ export function useMatchData(matchId: string | undefined): MatchData {
     };
   }, [matchId]);
 
-  return data;
+  // Derived at render time: until the effect has loaded *this* id, report nothing rather than the
+  // previous match. Memoised so the identity stays stable between renders, as it did before.
+  return useMemo(
+    () =>
+      loaded.id === matchId
+        ? { manifest: loaded.manifest, tracks: loaded.tracks, error: loaded.error }
+        : NOTHING_LOADED,
+    [loaded, matchId],
+  );
 }
 
 interface IndexData {

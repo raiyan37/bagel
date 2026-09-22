@@ -22,6 +22,19 @@ describe('useMatchData', () => {
     await waitFor(() => expect(result.current.error).toMatch(/404/));
     expect(result.current.manifest).toBeNull();
   });
+
+  it('does not serve the previous match after the id changes', async () => {
+    mockFetch({
+      '/matches/demo/manifest.json': sampleManifest,
+      '/matches/demo/tracks.json': sampleTracks,
+    });
+    const { result, rerender } = renderHook(({ id }) => useMatchData(id), { initialProps: { id: 'demo' } });
+    await waitFor(() => expect(result.current.manifest).not.toBeNull());
+    rerender({ id: 'other' });
+    expect(result.current.manifest).toBeNull();
+    expect(result.current.tracks).toBeNull();
+    expect(result.current.error).toBeNull();
+  });
 });
 
 describe('useMatchIndex', () => {
