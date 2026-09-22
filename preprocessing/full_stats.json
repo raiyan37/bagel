@@ -1,0 +1,24 @@
+{
+  "locateMain": {
+    "message": "The main character in the video is a soccer player who is preparing to take a penalty kick. This player is positioned on the left side of the frame, wearing a dark-colored uniform. They are standing a few meters away from the ball, which is placed on the penalty spot. The player's body is angled slightly towards the goal, and their arms are positioned to maintain balance. Their stance is firm, with feet planted on the ground, indicating preparation for the kick. The player's focus is directed towards the ball, and their posture suggests they are about to kick the ball into the goal. This individual is identified as the main character because they are the focal point of the action, and their positioning and body language clearly indicate their intent to kick the ball.",
+    "stopReason": "stop",
+    "_timing": {
+      "api_call_duration_seconds": 6.16,
+      "api_call_duration_formatted": "6.16s"
+    }
+  },
+  "describe": {
+    "message": "In the video, a soccer player in a blue uniform prepares to take a penalty kick on a soccer field. The goalkeeper, dressed in yellow, stands ready in front of the goal. The scene is filled with spectators in the stands, creating a vibrant atmosphere. The lighting is bright, suggesting the event is taking place during the day. The player approaches the ball, positioned on the penalty spot, takes a few steps, and then kicks the ball towards the goal. The goalkeeper dives to the right but fails to save the shot, and the ball goes into the net, scoring a goal. The player then walks away from the goal, and the camera remains stationary throughout the clip.",
+    "stopReason": "stop",
+    "_timing": {
+      "api_call_duration_seconds": 5.44,
+      "api_call_duration_formatted": "5.44s"
+    }
+  },
+  "coordinates": {
+    "x": 164.0,
+    "y": 721.0,
+    "image_width": 854,
+    "image_height": 480
+  }
+}

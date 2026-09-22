@@ -1,0 +1,298 @@
+/* ═══════════════════════════════════════════════════════════════
+   VIDEO CONTROLS - Minimal Design
+   Refined floating control bar
+   ═══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap');
+
+.controls-glass {
+  position: absolute;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 12px;
+  overflow: hidden;
+  animation: controlsSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes controlsSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Glass background */
+.controls-glass-bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+}
+
+/* Glass surface with borders */
+.controls-glass-surface {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: inherit;
+}
+
+/* Top highlight - hidden for minimal look */
+.controls-glass-highlight {
+  display: none;
+}
+
+/* Content layout */
+.controls-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 24px;
+  min-width: 520px;
+}
+
+/* Playback controls */
+.controls-playback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Generic button base */
+.controls-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.controls-btn svg {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+/* Skip buttons (rewind/forward) */
+.controls-btn--skip {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.controls-btn--skip svg {
+  width: 14px;
+  height: 14px;
+}
+
+.controls-btn--skip:hover {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Play/Pause button */
+.controls-btn--play {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.controls-btn-bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: inherit;
+  transition: all 0.3s ease;
+}
+
+.controls-btn--play svg {
+  width: 16px;
+  height: 16px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.controls-btn--play:hover .controls-btn-bg {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.controls-btn--play:hover svg {
+  color: #ffffff;
+}
+
+/* Progress section */
+.controls-progress-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.controls-time {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.7);
+  font-variant-numeric: tabular-nums;
+  min-width: 40px;
+  text-align: center;
+}
+
+.controls-time--dim {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Progress bar */
+.controls-progress {
+  flex: 1;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.controls-progress-track {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 1px;
+  overflow: visible;
+  transition: height 0.2s ease;
+}
+
+.controls-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 1px;
+  transition: width 0.1s linear;
+}
+
+.controls-progress-handle {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%) scale(0);
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.controls-progress:hover .controls-progress-handle {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.controls-progress:hover .controls-progress-track {
+  height: 3px;
+}
+
+/* Action buttons */
+.controls-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.controls-btn--action {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.controls-btn--action svg {
+  width: 16px;
+  height: 16px;
+}
+
+.controls-btn--action:hover {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COLLAPSED / EXPANDED STATES
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Toggle button (collapsed state) */
+.controls-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.controls-toggle svg {
+  width: 18px;
+  height: 18px;
+  position: relative;
+}
+
+.controls-toggle:hover {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.controls-toggle:hover .controls-btn-bg {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Close button (expanded state) */
+.controls-btn--close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.controls-btn--close svg {
+  width: 14px;
+  height: 14px;
+}
+
+.controls-btn--close:hover {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Collapsed state */
+.controls-glass--collapsed {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  animation: none;
+  opacity: 1;
+}
+
+.controls-glass--collapsed .controls-content {
+  padding: 0;
+}
+
+/* Expanded state */
+.controls-glass--expanded {
+  border-radius: 12px;
+  animation: none;
+  opacity: 1;
+}

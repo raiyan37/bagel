@@ -1,0 +1,11 @@
+/* Import all style modules */
+@import './styles/globals.css';
+@import './styles/glass.css';
+@import './styles/animations.css';
+
+/* Import component styles */
+@import './components/shared/styles.css';
+@import './components/shared/accessibility.css';
+@import './components/navigation/styles.css';
+@import './components/stream/styles.css';
+@import './components/player/styles.css';

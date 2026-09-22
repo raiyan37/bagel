@@ -1,0 +1,5 @@
+Please analyze this video and identify the main character.
+
+Focus on determining who is the person that is going to be kicking the ball. The main character is NOT necessarily who is speaking - instead, identify the person who is positioned to kick or is about to kick the ball. Describe the main character: their appearance, location in the frame, actions, gestures, body position, stance, and any distinguishing features. Explain how you determined they are the main character (e.g., they are positioned to kick the ball, they are approaching the ball, they are in a kicking stance, they are the focal point of the action).
+
+Provide a clear, human-readable description that helps identify and locate this main character (the person about to kick the ball) in the video.
