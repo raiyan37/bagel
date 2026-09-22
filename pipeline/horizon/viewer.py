@@ -200,12 +200,14 @@ def run_viewer(paths: MatchPaths, host: str = "0.0.0.0", port: int = 8080) -> No
             return
         busy["export"] = True
         export_button.disabled = True
+        fov.disabled = True
         option = follow.value
         static_pose = (np.array(gizmo.wxyz), np.array(gizmo.position))
+        hfov = fov.value
         try:
             count = render_clip(
                 scene,
-                lambda f: export_camera(option, players, f, static_pose, fov.value, POV_WIDTH, POV_HEIGHT),
+                lambda f: export_camera(option, players, f, static_pose, hfov, POV_WIDTH, POV_HEIGHT),
                 paths.free_cam_video,
                 exclude_role=excluded_role(option),
                 frame_count=total,
@@ -217,6 +219,7 @@ def run_viewer(paths: MatchPaths, host: str = "0.0.0.0", port: int = 8080) -> No
         finally:
             busy["export"] = False
             export_button.disabled = False
+            fov.disabled = False
 
     show_frame(0)
     print(f"Viewer running at http://localhost:{port} (Ctrl+C to stop)")
