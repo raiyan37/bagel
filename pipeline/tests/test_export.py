@@ -90,3 +90,10 @@ def test_export_match_copies_media_and_rebuilds_the_index(tmp_path):
 def test_export_reports_missing_videos(tmp_path):
     with pytest.raises(FileNotFoundError, match="pov_near.mp4"):
         export_match(write_match(tmp_path / "data", with_pov=False), public_matches=tmp_path / "public")
+
+
+def test_export_rejects_a_stale_calibration(tmp_path):
+    paths = write_match(tmp_path / "data")
+    save_meta(paths.meta, VideoInfo(960, 720, 25.0, 2))  # clip re-imported at a new size without recalibrating
+    with pytest.raises(ValueError, match="re-run"):
+        export_match(paths, public_matches=tmp_path / "public")

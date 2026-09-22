@@ -107,6 +107,7 @@ def update_index(public_matches: Path) -> dict:
 def export_match(
     paths: MatchPaths, public_matches: Path = PUBLIC_MATCHES, competition: str = "Tennis", viewer_url: str = VIEWER_URL
 ) -> Path:
+    """Publish one match. The size check keeps tracks.json percentages relative to the frame the manifest declares."""
     required = [paths.source_video, paths.pov_video("near"), paths.pov_video("far")]
     missing = [p.name for p in required if not p.is_file()]
     if missing:
@@ -115,6 +116,12 @@ def export_match(
     identity = Identity.load(paths.identity)
     players = Players.load(paths.players)
     camera = load_calibration(paths.calibration).camera
+    if (camera.width, camera.height) != (info.width, info.height):
+        raise ValueError(
+            f"calibration.json is for a {camera.width}x{camera.height} frame but source.mp4 is "
+            f"{info.width}x{info.height}; re-run `horizon calibrate --match-id {paths.match_id}` "
+            "(or `horizon all ... --recalibrate`)"
+        )
     target = Path(public_matches) / paths.match_id
     target.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(paths.source_video, target / "main.mp4")
