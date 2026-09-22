@@ -2,7 +2,7 @@
 
 Depth Anything V2 relative checkpoints predict affine-invariant disparity (larger = closer). On pixels that
 certainly show the court, the calibrated camera tells us the true depth, so we fit
-scale * disparity + shift = 1 / depth by trimmed least squares and apply it to the whole frame.
+scale * disparity + shift = 1 / depth robustly and apply it to the whole frame.
 """
 
 from __future__ import annotations
@@ -93,29 +93,54 @@ def fit_disparity_alignment(
     target_depth: np.ndarray,
     mask: np.ndarray,
     max_samples: int = 20000,
-    trim: float = 0.2,
+    inlier_tol: float = 0.1,
+    iterations: int = 200,
+    min_inlier_fraction: float = 0.3,
     seed: int = 0,
 ) -> DisparityAlignment:
+    """Robust fit of scale * disparity + shift = 1 / depth on the mask pixels.
+
+    RANSAC over pixel pairs (positive scales only) finds the consensus line; a pixel is an inlier when its
+    predicted inverse depth is within `inlier_tol` (relative) of the truth. Least squares on the consensus set,
+    one re-selection of inliers with the refined line and a final refit give the alignment.
+    """
     sel = mask & np.isfinite(target_depth) & (target_depth > 0)
     d = disparity[sel].astype(np.float64)
     y = 1.0 / target_depth[sel].astype(np.float64)
     if d.size < 50:
         raise ValueError(f"Only {d.size} ground pixels available for depth alignment (need >= 50)")
+    rng = np.random.default_rng(seed)
     if d.size > max_samples:
-        idx = np.random.default_rng(seed).choice(d.size, max_samples, replace=False)
+        idx = rng.choice(d.size, max_samples, replace=False)
         d, y = d[idx], y[idx]
+    not_disparity = ValueError(
+        "Depth model output does not behave like disparity (no positive-scale fit explains the court); "
+        "use a relative Depth Anything V2 checkpoint"
+    )
+    best = None
+    for _ in range(iterations):
+        i, j = rng.choice(d.size, 2, replace=False)
+        if d[i] == d[j]:
+            continue
+        scale = (y[i] - y[j]) / (d[i] - d[j])
+        if scale <= 0:
+            continue
+        inliers = np.abs(scale * d + (y[i] - scale * d[i]) - y) <= inlier_tol * y
+        if best is None or inliers.sum() > best.sum():
+            best = inliers
+    if best is None or best.mean() < min_inlier_fraction:
+        raise not_disparity
     A = np.stack([d, np.ones_like(d)], axis=1)
-    coef, *_ = np.linalg.lstsq(A, y, rcond=None)
-    residual = np.abs(A @ coef - y)
-    keep = residual <= np.quantile(residual, 1.0 - trim)
-    coef, *_ = np.linalg.lstsq(A[keep], y[keep], rcond=None)
+    coef, *_ = np.linalg.lstsq(A[best], y[best], rcond=None)
+    inliers = np.abs(A @ coef - y) <= inlier_tol * y
+    if inliers.sum() >= 2:
+        coef, *_ = np.linalg.lstsq(A[inliers], y[inliers], rcond=None)
+    else:
+        inliers = best
     scale, shift = float(coef[0]), float(coef[1])
     if scale <= 0:
-        raise ValueError(
-            "Depth model output does not behave like disparity (fitted scale <= 0); "
-            "use a relative Depth Anything V2 checkpoint"
-        )
-    rms = float(np.sqrt(np.mean((A[keep] @ coef - y[keep]) ** 2)))
+        raise not_disparity
+    rms = float(np.sqrt(np.mean((A[inliers] @ coef - y[inliers]) ** 2)))
     return DisparityAlignment(scale=scale, shift=shift, residual=rms)
 
 
