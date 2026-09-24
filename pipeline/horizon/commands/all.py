@@ -27,8 +27,11 @@ def run(args: argparse.Namespace) -> int:
     if args.duration is not None:
         init += ["--duration", str(args.duration)]
     steps = [init]
-    if args.recalibrate or not MatchPaths.for_match(args.match_id).calibration.is_file():
+    calibration = MatchPaths.for_match(args.match_id).calibration
+    if args.recalibrate or not calibration.is_file():
         steps.append(["calibrate", *match])
+    else:
+        print(f"reusing {calibration} - pass --recalibrate if this is a different camera or clip")
     steps += [
         ["track", *match],
         ["identify", *match, "--orchestrator", args.orchestrator],

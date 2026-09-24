@@ -98,6 +98,21 @@ def test_reconstruct_scene_end_to_end(tmp_path):
     assert np.all(np.abs(far[:, 1] - 10.0) < 1.5)
     assert near_radii.min() > 0
     assert np.all(np.abs(scene.background_points[:, 1] - WALL_Y) < 0.5)
+    sparse = reconstruct_scene(
+        video,
+        cam,
+        players,
+        detections,
+        FakeEstimator(background_depth),
+        stride=4,
+        samples=6,
+        extent=TEST_EXTENT,
+        resolution=0.1,
+        player_stride=3,
+    )
+    sparse_near, _, sparse_radii = sparse.players_at(2, exclude_role="far")
+    assert len(sparse_near) == pytest.approx(len(near) / 3, rel=0.1)
+    assert sparse_radii.min() > 2.5 * near_radii.min()
     scene.save(tmp_path / "scene.npz")
     again = Scene.load(tmp_path / "scene.npz")
     assert np.array_equal(again.frame_offsets, scene.frame_offsets)

@@ -99,6 +99,11 @@ def test_gemini_parse_handles_code_fences():
     assert boxes == {"near": (100.0, 600.0, 200.0, 900.0), "far": (500.0, 200.0, 550.0, 300.0)}
 
 
+def test_gemini_parse_reports_a_malformed_payload():
+    with pytest.raises(ValueError, match="choices"):
+        gemini.parse_response({"choices": []}, 1000, 1000)
+
+
 def test_locate_players_sends_image_and_schema():
     data = {"near_player": {"box_2d": [500, 100, 900, 200]}, "far_player": {"box_2d": [100, 600, 250, 650]}}
     session = FakeSession(FakeResponse(200, openrouter_body(json.dumps(data))))

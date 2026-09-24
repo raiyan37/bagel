@@ -19,6 +19,7 @@ from horizon.camera import PinholeCamera, camera_from_dict, camera_to_dict, intr
 from horizon.court import KEYPOINTS, court_lines, net_quad
 
 MAX_ACCEPTABLE_RMS_PX = 4.0
+MIN_KEYPOINT_SPREAD_M = 1.0  # keypoints on a single line cannot fix a pose
 
 
 @dataclass(frozen=True)
@@ -69,6 +70,13 @@ def solve_calibration(keypoints: dict[str, tuple[float, float]], width: int, hei
         raise ValueError(f"Need at least 4 court keypoints, got {len(names)}")
     world = np.array([[*KEYPOINTS[n], 0.0] for n in names], dtype=np.float64)
     image = np.array([keypoints[n] for n in names], dtype=np.float64)
+    spread_x = float(world[:, 0].max() - world[:, 0].min())
+    spread_y = float(world[:, 1].max() - world[:, 1].min())
+    if spread_x < MIN_KEYPOINT_SPREAD_M or spread_y < MIN_KEYPOINT_SPREAD_M:
+        raise ValueError(
+            f"These keypoints are collinear: they span {spread_x:.2f} m across and {spread_y:.2f} m along the court "
+            f"(need more than {MIN_KEYPOINT_SPREAD_M:.0f} m of each); click points from both sidelines and both ends"
+        )
 
     def rms_for(focal: float) -> float:
         best = _best_pose(world, image, intrinsics(focal, width, height))

@@ -182,6 +182,7 @@ def reconstruct_scene(
     samples: int = 24,
     extent: tuple[float, float, float, float] = DEFAULT_EXTENT,
     resolution: float = 0.025,
+    player_stride: int = 1,
     log: Callable[[str], None] | None = None,
 ) -> Scene:
     log = log or (lambda _msg: None)
@@ -210,6 +211,7 @@ def reconstruct_scene(
     grow = np.ones((9, 9), np.uint8)
     pts_list, col_list, rad_list, role_list = [], [], [], []
     offsets = [0]
+    fallbacks = 0
     for index, rgb in iter_frames(video_path, stop=total):
         player_masks = _player_masks(detections, players, index)
         count = 0
@@ -219,7 +221,12 @@ def reconstruct_scene(
             for _, mask in player_masks.values():
                 union |= mask.astype(np.uint8)
             exclude = cv2.dilate(union, grow).astype(bool)
-            depth = fit_disparity_alignment(disparity, ground_depth, court_fit_mask(camera, exclude=exclude)).depth(disparity)
+            try:
+                frame_alignment = fit_disparity_alignment(disparity, ground_depth, court_fit_mask(camera, exclude=exclude))
+            except ValueError:  # too little visible court on this frame: keep the clean-plate alignment
+                frame_alignment = alignment
+                fallbacks += 1
+            depth = frame_alignment.depth(disparity)
             for role, (det, mask) in player_masks.items():
                 inner = cv2.erode(mask.astype(np.uint8), erode).astype(bool)
                 if inner.sum() < 10:
@@ -227,16 +234,17 @@ def reconstruct_scene(
                 _, foot_depth = camera.ground_intersection(np.array([det.foot[0]]), np.array([det.foot[1]]))
                 if not np.isfinite(foot_depth[0]):
                     continue
-                values = anchor_player_depth(depth, inner, float(foot_depth[0]))
+                values = anchor_player_depth(depth, inner, float(foot_depth[0]))[::player_stride]
                 v_idx, u_idx = np.nonzero(inner)
+                v_idx, u_idx = v_idx[::player_stride], u_idx[::player_stride]
                 pts_list.append(camera.backproject(u_idx, v_idx, values).astype(np.float32))
                 col_list.append(rgb[v_idx, u_idx])
-                rad_list.append((0.5 * values / camera.fy).astype(np.float32))
+                rad_list.append((0.5 * player_stride * values / camera.fy).astype(np.float32))
                 role_list.append(np.full(len(values), ROLE_CODES[role], np.uint8))
                 count += len(values)
         offsets.append(offsets[-1] + count)
         if index % 50 == 0:
-            log(f"  players: frame {index}/{total}")
+            log(f"  players: frame {index}/{total} ({fallbacks} frames on the clean-plate alignment)")
     while len(offsets) < total + 1:  # fewer decoded frames than expected: empty tail
         offsets.append(offsets[-1])
 

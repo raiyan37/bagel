@@ -293,11 +293,25 @@ def identify_via_backboard(
         model_name=model_name,
     )
     notes = [f"backboard: {e.name} failed: {e.error}" for e in result.executions if e.error]
+    ran = {e.name for e in result.executions}
+
+    def retry_note(tool: str, service: str) -> str:
+        outcome = "failed" if tool in ran else "was skipped by the assistant"
+        return f"backboard: {tool} {outcome}; called {service} directly"
+
     if "analysis" not in state:
-        notes.append("backboard: assistant skipped analyze_tennis_clip; called Pegasus directly")
-        state["analysis"] = pegasus.analyze_clip(video_path)
+        notes.append(retry_note("analyze_tennis_clip", "Pegasus"))
+        try:
+            state["analysis"] = pegasus.analyze_clip(video_path)
+        except Exception as exc:  # identify without names rather than aborting the run
+            notes.append(f"pegasus.analyze_clip failed: {type(exc).__name__}: {exc}; players stay unnamed")
+            state["analysis"] = ClipAnalysis(PlayerDescription("Unknown", ""), PlayerDescription("Unknown", ""), "", "")
     if "boxes" not in state:
-        notes.append("backboard: assistant skipped locate_players; called Gemini directly")
+        notes.append(retry_note("locate_players", "Gemini"))
         analysis = state["analysis"]
-        state["boxes"] = gemini.locate_players(frame_rgb, analysis.near.appearance, analysis.far.appearance)
+        try:
+            state["boxes"] = gemini.locate_players(frame_rgb, analysis.near.appearance, analysis.far.appearance)
+        except Exception as exc:  # resolve_identity falls back to court geometry when there are no boxes
+            notes.append(f"gemini.locate_players failed: {type(exc).__name__}: {exc}; using court geometry only")
+            state["boxes"] = {}
     return state["analysis"], state["boxes"], notes

@@ -73,14 +73,22 @@ def box_2d_to_xyxy(box, width: int, height: int) -> tuple[float, float, float, f
 
 
 def parse_response(body: dict, width: int, height: int) -> dict[str, tuple[float, float, float, float]]:
-    content = body["choices"][0]["message"]["content"]
+    choices = body.get("choices") or []
+    if not choices:
+        raise ValueError(f"OpenRouter response has no choices: {str(body)[:300]}")
+    content = (choices[0].get("message") or {}).get("content")
+    if content is None:
+        raise ValueError(f"OpenRouter response has no message.content: {str(choices[0])[:300]}")
     if isinstance(content, list):
         content = "".join(part.get("text", "") for part in content if isinstance(part, dict))
     data = loads_lenient(content)
-    return {
-        "near": box_2d_to_xyxy(data["near_player"]["box_2d"], width, height),
-        "far": box_2d_to_xyxy(data["far_player"]["box_2d"], width, height),
-    }
+    boxes = {}
+    for role, key in (("near", "near_player"), ("far", "far_player")):
+        player = data.get(key) if isinstance(data, dict) else None
+        if not isinstance(player, dict) or "box_2d" not in player:
+            raise ValueError(f"Gemini answer has no {key}.box_2d: {str(data)[:300]}")
+        boxes[role] = box_2d_to_xyxy(player["box_2d"], width, height)
+    return boxes
 
 
 def locate_players(

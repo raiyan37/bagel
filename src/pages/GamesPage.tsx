@@ -27,7 +27,7 @@ function toGame(match: MatchSummary): Game {
 }
 
 export function GamesPage() {
-  const { matches, loading } = useMatchIndex();
+  const { matches, loading, error } = useMatchIndex();
 
   return (
     <div className="games-page">
@@ -48,10 +48,14 @@ export function GamesPage() {
         {loading ? (
           <p className="games-empty" role="status">Loading matches…</p>
         ) : matches.length === 0 ? (
-          <p className="games-empty" role="status">
-            No processed matches yet. In <code>pipeline\</code> run{' '}
-            <code>.venv\Scripts\python -m horizon all path\to\clip.mp4 --match-id demo</code>.
-          </p>
+          error !== null ? (
+            <p className="games-empty" role="alert">Could not read the match list: {error}</p>
+          ) : (
+            <p className="games-empty" role="status">
+              No processed matches yet. In <code>pipeline\</code> run{' '}
+              <code>.venv\Scripts\python -m horizon all path\to\clip.mp4 --match-id demo</code>.
+            </p>
+          )
         ) : (
           <div className="games-grid" role="list" aria-label="Tennis matches">
             {matches.map((match) => (

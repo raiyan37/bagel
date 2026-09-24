@@ -53,6 +53,8 @@ A window opens on the first frame. Click each keypoint named at the top; the red
 
 Check `data\demo\calibration_preview.jpg`: the red court lines must sit on the painted lines.
 
+A match id that already has a `calibration.json` reuses it instead of asking for the clicks again, and prints which file it reused. Pass `--recalibrate` whenever the clip comes from a different camera, angle or match.
+
 Individual steps: `init`, `calibrate`, `track`, `identify`, `players`, `reconstruct`, `render`, `export`. Run `python -m horizon <step> --help` for options.
 
 ## Explore

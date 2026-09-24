@@ -164,6 +164,29 @@ def test_identify_via_backboard_calls_services_directly_when_tools_are_skipped(t
     assert len(notes) == 2
 
 
+def test_identify_via_backboard_survives_failing_services(tmp_path, monkeypatch):
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("AccessDeniedException: no Bedrock access")
+
+    monkeypatch.setattr(identify.pegasus, "analyze_clip", boom)
+    monkeypatch.setattr(identify.gemini, "locate_players", boom)
+    first = {
+        "run_id": "r",
+        "tool_calls": [
+            {"id": "a", "function": {"name": "analyze_tennis_clip", "arguments": "{}"}},
+            {"id": "b", "function": {"name": "locate_players", "arguments": "{}"}},
+        ],
+    }
+    fake = FakeBackboard(first, {"content": "done"})
+    frame = np.zeros((4, 4, 3), np.uint8)
+    analysis, boxes, notes = identify.identify_via_backboard(fake, "demo", tmp_path / "s.mp4", frame, tmp_path / "c.json")
+    assert analysis.near.name == "Unknown" and analysis.far.name == "Unknown" and analysis.score == ""
+    assert boxes == {}
+    assert not any("skipped" in note for note in notes)  # both tools ran; they failed
+    assert any("pegasus.analyze_clip failed" in note and "AccessDeniedException" in note for note in notes)
+    assert any("gemini.locate_players failed" in note and "RuntimeError" in note for note in notes)
+
+
 def test_identify_command_without_ai_services(tmp_path, monkeypatch):
     monkeypatch.setenv("HORIZON_DATA_ROOT", str(tmp_path))
     cam, dets = scene_detections()

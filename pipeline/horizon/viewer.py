@@ -223,7 +223,10 @@ def run_viewer(paths: MatchPaths, host: str = "0.0.0.0", port: int = 8080) -> No
 
     show_frame(0)
     print(f"Viewer running at http://localhost:{port} (Ctrl+C to stop)")
-    while True:
-        if playing.value and not busy["export"] and total > 1:
-            frame_slider.value = (int(frame_slider.value) + 1) % total
-        time.sleep(1.0 / max(float(fps_slider.value), 1.0))
+    try:
+        while True:
+            if playing.value and not busy["export"] and total > 1:
+                frame_slider.value = (int(frame_slider.value) + 1) % total
+            time.sleep(1.0 / max(float(fps_slider.value), 1.0))
+    except KeyboardInterrupt:
+        print("Viewer stopped")

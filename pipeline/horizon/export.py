@@ -130,8 +130,8 @@ def export_match(
     has_free_cam = paths.free_cam_video.is_file()
     if has_free_cam:
         shutil.copyfile(paths.free_cam_video, target / "free_cam.mp4")
-    (target / "tracks.json").write_text(json.dumps(build_tracks_json(players, camera)))
+    (target / "tracks.json").write_text(json.dumps(build_tracks_json(players, camera), allow_nan=False))
     manifest = build_manifest(paths.match_id, info, identity, players, has_free_cam, competition, viewer_url)
-    (target / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    (target / "manifest.json").write_text(json.dumps(manifest, indent=2, allow_nan=False))
     update_index(public_matches)
     return target

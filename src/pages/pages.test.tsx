@@ -27,9 +27,15 @@ describe('GamesPage', () => {
   });
 
   it('explains how to create a match when none exist', async () => {
-    mockFetch({});
+    mockFetch({ '/matches/index.json': { matches: [] } });
     renderAt('/');
     expect(await screen.findByText(/No processed matches yet/)).toBeInTheDocument();
+  });
+
+  it('reports why the match list could not be read', async () => {
+    mockFetch({});
+    renderAt('/');
+    expect(await screen.findByRole('alert')).toHaveTextContent(/HTTP 404/);
   });
 });
 

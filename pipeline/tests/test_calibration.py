@@ -18,6 +18,7 @@ from horizon.video import H264Writer
 
 W, H = 1280, 720
 CORNERS = ["near_doubles_left", "near_doubles_right", "far_doubles_right", "far_doubles_left"]
+COLLINEAR = ["near_doubles_left", "near_singles_left", "near_singles_right", "near_doubles_right"]
 
 
 def true_camera() -> PinholeCamera:
@@ -59,6 +60,11 @@ def test_tolerates_click_noise():
 def test_rejects_fewer_than_four_points():
     with pytest.raises(ValueError):
         solve_calibration(clicks(true_camera(), CORNERS[:3]), W, H)
+
+
+def test_rejects_keypoints_that_span_only_one_axis():
+    with pytest.raises(ValueError, match="collinear"):
+        solve_calibration(clicks(true_camera(), COLLINEAR), W, H)
 
 
 def test_save_load_and_overlay(tmp_path):

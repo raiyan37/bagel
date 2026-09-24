@@ -19,6 +19,7 @@ def register(sub: argparse._SubParsersAction) -> None:
     p.add_argument("--match-id", required=True)
     p.add_argument("--depth-model", default=DEFAULT_DEPTH_MODEL, help="Hugging Face id of a relative Depth Anything V2 model")
     p.add_argument("--stride", type=int, default=2, help="Background pixel stride")
+    p.add_argument("--player-stride", type=int, default=1, help="Player pixel stride (2 or 3 for smaller scenes)")
     p.add_argument("--samples", type=int, default=24, help="Frames used for the clean plate")
     p.set_defaults(handler=run)
 
@@ -33,6 +34,7 @@ def run(args: argparse.Namespace) -> int:
         DepthAnythingV2(args.depth_model),
         stride=args.stride,
         samples=args.samples,
+        player_stride=args.player_stride,
         log=print,
     )
     scene.save(paths.scene)

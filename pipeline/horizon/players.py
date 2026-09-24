@@ -104,8 +104,9 @@ def associate(
 ):
     """Follow one player through the clip on the court plane, surviving ByteTrack ID switches.
 
-    Keeps the current track id while it is present on the player's half; otherwise takes the closest
-    person on that half if they are within reach (max_base_jump + max_speed * elapsed seconds).
+    Prefers the identified track whenever it is on the player's half, then the current one; otherwise takes
+    the closest person on that half if they are within reach (max_base_jump + max_speed * elapsed seconds).
+    Preferring the identified track lets the player be re-acquired after a ball kid has taken the id over.
     """
     current = start_track_id
     last_xy: tuple[float, float] | None = None
@@ -124,7 +125,11 @@ def associate(
             xy = court_xy(camera, det.foot)
             if on_half(role, xy):
                 options.append((det, xy))
-        pick = next(((d, xy) for d, xy in options if d.track_id == current), None)
+        pick = next(((d, xy) for d, xy in options if d.track_id == start_track_id), None)
+        if pick is not None:
+            current = start_track_id
+        else:
+            pick = next(((d, xy) for d, xy in options if d.track_id == current), None)
         if pick is None and options and last_xy is not None:
             elapsed = abs(i - last_frame) / detections.fps if last_frame is not None else 0.0
             det, xy = min(options, key=lambda o: _distance(o[1], last_xy))

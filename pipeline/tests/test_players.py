@@ -33,6 +33,20 @@ def test_associate_follows_id_switch_skips_gaps_and_ignores_ball_kid():
     assert xys[6] == pytest.approx((1.2, -10.0), abs=1e-6)
 
 
+def test_associate_reacquires_the_identified_player_after_a_ball_kid_takes_over():
+    cam = broadcast_camera()
+    frames = []
+    for i in range(12):
+        frame = [person_detection(cam, 2, 1.0, -10.0, stature=0.9)]  # ball kid about 1 m from the player
+        if i < 3 or i >= 8:
+            frame.append(person_detection(cam, 5, 0.0, -10.0))
+        frames.append(frame)
+    ids, _, _ = associate(Detections(W, H, 25.0, frames), cam, "near", start_track_id=5)
+    assert ids[:3] == [5, 5, 5]
+    assert ids[3:8] == [2] * 5  # while the player is missing the kid is the only person within reach
+    assert ids[8:] == [5] * 4  # the identified track wins as soon as it is back
+
+
 def test_fill_gaps_and_smoothing():
     filled = fill_gaps([None, (0.0, 0.0), None, (2.0, 2.0), None])
     assert filled.tolist() == [[0.0, 0.0], [0.0, 0.0], [1.0, 1.0], [2.0, 2.0], [2.0, 2.0]]
