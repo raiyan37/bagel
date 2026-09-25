@@ -73,6 +73,10 @@ class MatchPaths:
         return self.root / "players.json"
 
     @property
+    def ball(self) -> Path:
+        return self.root / "ball.json"
+
+    @property
     def scene(self) -> Path:
         return self.root / "scene.npz"
 

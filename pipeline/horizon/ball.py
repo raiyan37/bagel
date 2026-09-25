@@ -7,6 +7,10 @@ so the whole 3D fit is a linear least-squares problem (see the POV ball spec §2
 
 from __future__ import annotations
 
+import json
+from dataclasses import dataclass
+from pathlib import Path
+
 import cv2
 import numpy as np
 
@@ -196,4 +200,124 @@ def is_plausible(a: np.ndarray, v: np.ndarray, t: np.ndarray, max_speed_ms: floa
         and np.all(np.abs(points[:, 0]) < COURT_BOX_X)
         and np.all(np.abs(points[:, 1]) < COURT_BOX_Y)
         and np.all(speeds < max_speed_ms)
+    )
+
+
+@dataclass(frozen=True)
+class BallSegment:
+    """One flight between contacts. `start` and `end` are inclusive frame indices."""
+
+    start: int
+    end: int
+    a: np.ndarray
+    v: np.ndarray
+
+
+def split_flights(camera, frames, uv, fps: float, max_rms_px: float = 3.0, min_length: int = 4) -> list[BallSegment]:
+    """Cut the tracklet wherever one parabola cannot explain it: those cuts are the bounces and racket hits.
+
+    A span is accepted when a single fit explains it to within `max_rms_px` and is physically possible.
+    Otherwise it is cut at its worst observation and both halves are retried. Spans that are too short, or
+    that do not determine a trajectory at all, are dropped, so unexplained frames simply have no ball.
+    """
+    frames = np.asarray(frames, dtype=np.int64)
+    uv = np.asarray(uv, dtype=np.float64).reshape(-1, 2)
+    accepted: list[BallSegment] = []
+    pending = [(0, len(frames))]
+    while pending:
+        low, high = pending.pop()
+        if high - low < min_length:
+            continue
+        try:
+            a, v = fit_ballistic(camera, frames[low:high], uv[low:high], fps)
+        except ValueError:
+            continue  # too few observations, or they do not determine a trajectory
+        t = segment_times(frames[low:high], fps)
+        residuals = reprojection_residuals(camera, a, v, t, uv[low:high])
+        rms = float(np.sqrt(np.mean(residuals**2)))
+        if rms <= max_rms_px and is_plausible(a, v, t):
+            accepted.append(BallSegment(int(frames[low]), int(frames[high - 1]), a, v))
+            continue
+        if high - low < 2 * min_length:
+            continue  # cannot cut into two halves that are both long enough to fit
+        cut = int(np.clip(low + int(np.argmax(residuals)), low + min_length, high - min_length))
+        pending.append((low, cut))
+        pending.append((cut, high))
+    return sorted(accepted, key=lambda s: s.start)
+
+
+@dataclass
+class BallTrack:
+    fps: float
+    frame_count: int
+    xyz: np.ndarray  # (T, 3) world metres, NaN on frames with no ball
+    reprojection_rms_px: float
+    segments: list[tuple[int, int]]
+
+    @property
+    def detected_frames(self) -> int:
+        return int(np.isfinite(self.xyz[:, 0]).sum())
+
+    def position(self, frame: int) -> np.ndarray | None:
+        if not 0 <= frame < len(self.xyz):
+            return None
+        point = self.xyz[frame]
+        return None if not np.isfinite(point).all() else point
+
+    def save(self, path: Path) -> None:
+        data = {
+            "fps": self.fps,
+            "frame_count": self.frame_count,
+            "reprojection_rms_px": round(self.reprojection_rms_px, 4),
+            "segments": [{"start": s, "end": e} for s, e in self.segments],
+            "xyz": [None if not np.isfinite(p).all() else [round(float(c), 4) for c in p] for p in self.xyz],
+        }
+        Path(path).write_text(json.dumps(data))
+
+    @classmethod
+    def load(cls, path: Path) -> "BallTrack":
+        data = json.loads(Path(path).read_text())
+        rows = [[np.nan] * 3 if p is None else [float(c) for c in p] for p in data["xyz"]]
+        return cls(
+            fps=float(data["fps"]),
+            frame_count=int(data["frame_count"]),
+            xyz=np.array(rows, dtype=np.float64).reshape(-1, 3),
+            reprojection_rms_px=float(data["reprojection_rms_px"]),
+            segments=[(int(s["start"]), int(s["end"])) for s in data["segments"]],
+        )
+
+
+def build_ball_track(
+    camera,
+    candidates: list[list[tuple[float, float]]],
+    fps: float,
+    frame_count: int,
+    max_step_px: float = 180.0,
+    max_gap: int = 3,
+    min_length: int = 5,
+    max_rms_px: float = 3.0,
+) -> BallTrack:
+    """Candidates -> one world position per frame, plus the segments and the fit quality."""
+    xyz = np.full((frame_count, 3), np.nan)
+    frames, uv = link_track(candidates, max_step_px=max_step_px, max_gap=max_gap, min_length=min_length)
+    if len(frames) < 3:
+        return BallTrack(fps=fps, frame_count=frame_count, xyz=xyz, reprojection_rms_px=0.0, segments=[])
+    flights = split_flights(camera, frames, uv, fps, max_rms_px=max_rms_px)
+    squared, observations = 0.0, 0
+    for segment in flights:
+        span = np.arange(segment.start, min(segment.end, frame_count - 1) + 1)
+        xyz[span] = ballistic_positions(segment.a, segment.v, (span - segment.start) / float(fps))
+        inside = (frames >= segment.start) & (frames <= segment.end)
+        if inside.any():
+            residuals = reprojection_residuals(
+                camera, segment.a, segment.v, (frames[inside] - segment.start) / float(fps), uv[inside]
+            )
+            squared += float(np.sum(residuals**2))
+            observations += int(inside.sum())
+    return BallTrack(
+        fps=fps,
+        frame_count=frame_count,
+        xyz=xyz,
+        reprojection_rms_px=float(np.sqrt(squared / observations)) if observations else 0.0,
+        segments=[(s.start, s.end) for s in flights],
     )

@@ -4,13 +4,17 @@ from synthetic import broadcast_camera
 
 from horizon.ball import (
     GRAVITY,
+    BallTrack,
     ballistic_positions,
+    build_ball_track,
     detect_candidates,
     fit_ballistic,
     is_plausible,
     link_track,
     reprojection_residuals,
+    split_flights,
 )
+from horizon.paths import MatchPaths
 
 
 def court_plate(height=120, width=160):
@@ -191,3 +195,90 @@ def test_is_plausible_rejects_a_ball_that_leaves_the_court_box():
 def test_is_plausible_rejects_non_finite_parameters():
     t = np.linspace(0.0, 0.5, 8)
     assert not is_plausible(np.array([np.nan, 0.0, 1.0]), np.array([0.0, 5.0, 0.0]), t)
+
+
+FLIGHT_A, FLIGHT_V = np.array([2.0, -9.0, 1.0]), np.array([-0.6, 15.0, 4.2])
+
+
+def two_flight_candidates(fps=25.0, span=12):
+    """A ball struck again at frame `span`. A racket changes the velocity, not the position, so the 2D
+    track stays continuous and one parabola still cannot explain the whole thing."""
+    camera = broadcast_camera()
+    t = np.arange(span) / fps
+    first = ballistic_positions(FLIGHT_A, FLIGHT_V, t)
+    contact = ballistic_positions(FLIGHT_A, FLIGHT_V, np.array([span / fps]))[0]
+    second = ballistic_positions(contact, np.array([0.4, -14.0, 3.0]), t)
+    uv, _z = camera.project(np.vstack([first, second]))
+    return camera, [[(float(u), float(v))] for u, v in uv]
+
+
+def test_split_flights_keeps_a_single_parabola_whole():
+    camera, index, uv, _t = flight(frames=range(14))
+    segments = split_flights(camera, index, uv, 25.0)
+    assert len(segments) == 1
+    assert (segments[0].start, segments[0].end) == (0, 13)
+
+
+def test_split_flights_cuts_at_the_racket_hit():
+    camera, candidates = two_flight_candidates()
+    frames, uv = link_track(candidates)
+    assert len(frames) == 24, "the hit must not break the 2D tracklet"
+    segments = split_flights(camera, frames, uv, 25.0)
+    assert len(segments) >= 2
+    assert not any(s.start <= 5 and s.end >= 18 for s in segments)  # nothing spans the hit at frame 12
+
+
+def test_split_flights_drops_spans_that_are_too_short():
+    camera, index, uv, _t = flight(frames=range(3))
+    assert split_flights(camera, index, uv, 25.0, min_length=4) == []
+
+
+def test_split_flights_drops_a_degenerate_span_instead_of_raising():
+    camera = broadcast_camera()
+    index = np.arange(8)
+    depths = 12.0 + 18.0 * index / 25.0
+    uv, _z = camera.project(camera.center[None, :] + camera.forward[None, :] * depths[:, None])
+    assert split_flights(camera, index, uv, 25.0) == []
+
+
+def test_build_ball_track_gives_a_world_position_per_covered_frame():
+    camera, candidates = two_flight_candidates()
+    track = build_ball_track(camera, candidates, fps=25.0, frame_count=len(candidates))
+    assert track.frame_count == len(candidates)
+    assert track.detected_frames >= 16
+    assert track.reprojection_rms_px < 3.0
+    expected = ballistic_positions(FLIGHT_A, FLIGHT_V, np.array([2 / 25.0]))[0]
+    assert track.position(2) == pytest.approx(expected, abs=0.1)
+
+
+def test_build_ball_track_with_no_candidates_is_empty_not_an_error():
+    """Review Focus 1: a clip where the ball is never found still produces a usable artifact."""
+    track = build_ball_track(broadcast_camera(), [[] for _ in range(20)], fps=25.0, frame_count=20)
+    assert track.frame_count == 20
+    assert track.detected_frames == 0
+    assert track.segments == []
+    assert track.position(0) is None
+    assert track.reprojection_rms_px == 0.0
+
+
+def test_ball_track_round_trips_through_json(tmp_path):
+    camera, candidates = two_flight_candidates()
+    track = build_ball_track(camera, candidates, fps=25.0, frame_count=len(candidates))
+    path = tmp_path / "ball.json"
+    track.save(path)
+    loaded = BallTrack.load(path)
+    assert loaded.fps == track.fps and loaded.frame_count == track.frame_count
+    assert loaded.segments == track.segments
+    assert loaded.reprojection_rms_px == pytest.approx(track.reprojection_rms_px, abs=1e-3)
+    np.testing.assert_allclose(np.nan_to_num(loaded.xyz, nan=-999.0), np.nan_to_num(track.xyz, nan=-999.0), atol=1e-3)
+
+
+def test_ball_track_position_is_none_outside_the_clip():
+    """Review Focus 3: a ball.json shorter than the scene must not raise on the extra frames."""
+    track = BallTrack(fps=25.0, frame_count=2, xyz=np.full((2, 3), np.nan), reprojection_rms_px=0.0, segments=[])
+    assert track.position(5) is None
+    assert track.position(-1) is None
+
+
+def test_match_paths_expose_the_ball_artifact(tmp_path):
+    assert MatchPaths.for_match("demo", tmp_path).ball == tmp_path / "demo" / "ball.json"
