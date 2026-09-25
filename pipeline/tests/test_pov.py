@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from synthetic import broadcast_camera
 
+from horizon.ball import BallTrack
 from horizon.ground import GroundTexture
 from horizon.players import EYE_HEIGHT_RATIO, Players, PlayerTrack
 from horizon.pov import pov_camera, render_pov_clip
@@ -66,3 +67,61 @@ def test_render_pov_clip_writes_a_frame_aligned_video(tmp_path):
     assert len(frames) == 4
     sky = sky_gradient(160, 96)
     assert np.abs(frames[0][-10:].astype(int) - sky[-10:].astype(int)).mean() > 20  # the ground fills the bottom
+
+
+def ball_in_front_of(players, role, frames, distance=1.0):
+    """A stationary ball hanging a short way along the player's view direction."""
+    eye = players.tracks[role].eye(0)
+    point = eye + pov_camera(players, role, 0).forward * distance
+    return BallTrack(
+        fps=25.0,
+        frame_count=frames,
+        xyz=np.tile(point, (frames, 1)),
+        reprojection_rms_px=0.0,
+        segments=[(0, frames - 1)],
+    )
+
+
+def ball_pixel_count(image):
+    """Pixels carrying a shaded tennis-ball colour. empty_scene's ground is a dark green whose red channel
+    is far too low to qualify, and the sky is darker still, so only the ball is counted."""
+    pixels = image.astype(int)
+    return int(((pixels[..., 0] > 110) & (pixels[..., 1] > 120) & (pixels[..., 2] < 150)).sum())
+
+
+def test_render_pov_clip_without_a_ball_is_unchanged(tmp_path):
+    """Review Focus 2: a match with no ball.json renders exactly as before."""
+    players = static_players((1.0, -10.0), (-2.0, 10.0), frames=3)
+    plain, explicit = tmp_path / "plain.mp4", tmp_path / "explicit.mp4"
+    render_pov_clip(empty_scene(3), players, "near", plain, width=160, height=96)
+    render_pov_clip(empty_scene(3), players, "near", explicit, width=160, height=96, ball=None)
+    assert plain.read_bytes() == explicit.read_bytes()
+
+
+def test_render_pov_clip_draws_the_ball(tmp_path):
+    players = static_players((1.0, -10.0), (-2.0, 10.0), frames=3)
+    out = tmp_path / "pov_near.mp4"
+    ball = ball_in_front_of(players, "near", 3)
+    render_pov_clip(empty_scene(3), players, "near", out, width=160, height=96, ball=ball)
+    frames = [f for _, f in iter_frames(out)]
+    assert len(frames) == 3
+    assert ball_pixel_count(frames[0]) > 10
+
+
+def test_render_pov_clip_hides_the_ball_on_frames_it_has_no_position_for(tmp_path):
+    players = static_players((1.0, -10.0), (-2.0, 10.0), frames=3)
+    ball = ball_in_front_of(players, "near", 3)
+    ball.xyz[2] = np.nan
+    out = tmp_path / "pov_near.mp4"
+    render_pov_clip(empty_scene(3), players, "near", out, width=160, height=96, ball=ball)
+    frames = [f for _, f in iter_frames(out)]
+    assert ball_pixel_count(frames[0]) > 10
+    assert ball_pixel_count(frames[2]) < 5  # not == 0: H.264 can ghost a few pixels from the previous frame
+
+
+def test_render_pov_clip_tolerates_a_ball_shorter_than_the_clip(tmp_path):
+    """Review Focus 3, at the render boundary: a two-frame ball.json against a four-frame clip."""
+    players = static_players((1.0, -10.0), (-2.0, 10.0), frames=4)
+    out = tmp_path / "pov_near.mp4"
+    ball = ball_in_front_of(players, "near", 2)
+    assert render_pov_clip(empty_scene(4), players, "near", out, width=160, height=96, ball=ball) == 4

@@ -9,7 +9,9 @@ from horizon.paths import MatchPaths
 
 
 def register(sub: argparse._SubParsersAction) -> None:
-    p = sub.add_parser("all", help="init -> calibrate -> track -> identify -> players -> reconstruct -> render -> export")
+    p = sub.add_parser(
+        "all", help="init -> calibrate -> track -> identify -> players -> ball -> reconstruct -> render -> export"
+    )
     p.add_argument("video", type=Path)
     p.add_argument("--match-id", required=True)
     p.add_argument("--start", type=float, default=0.0)
@@ -36,6 +38,7 @@ def run(args: argparse.Namespace) -> int:
         ["track", *match],
         ["identify", *match, "--orchestrator", args.orchestrator],
         ["players", *match],
+        ["ball", *match],
         ["reconstruct", *match],
         ["render", *match],
         ["export", *match],
