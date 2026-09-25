@@ -1,11 +1,5 @@
 <div align="center">
-  <img
-    src="src/assets/project-horizon-logo.svg"
-    width="200"
-    alt="Project Horizon"
-  />
-
-  <h1>Project Horizon</h1>
+  <h1>Bagel</h1>
   <em>You can be anyone.</em>
   <br /><br />
 
@@ -14,7 +8,7 @@
 
 ## What this is
 
-Project Horizon is a proof-of-concept for **first-person sports viewing**: taking a normal broadcast clip and giving fans a player's-eye view of the action, on top of the usual scoreboard/highlight experience.
+Bagel is a proof-of-concept for **first-person sports viewing**: taking a normal broadcast clip and giving fans a player's-eye view of the action, on top of the usual scoreboard/highlight experience.
 
 The demo clip is a Premier League penalty shootout (Bruno Fernandes vs. David Raya). The web app plays the broadcast footage with a live scoreboard and goal celebration, while overlaying computer-vision-tracked player cards that expand into synced point-of-view video for each player on the pitch.
 
