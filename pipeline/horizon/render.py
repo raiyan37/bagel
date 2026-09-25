@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from horizon.ball import BALL_RADIUS_M
 from horizon.camera import PinholeCamera
 from horizon.depth import pixel_grid
 from horizon.ground import GroundTexture
@@ -16,6 +17,8 @@ from horizon.ground import GroundTexture
 SKY_TOP = (10, 12, 18)
 SKY_HORIZON = (38, 44, 58)
 GROUND_EPSILON = 0.05  # metres; points must be this much in front of the ground to win
+BALL_COLOR = (214, 232, 78)
+BALL_POINTS = 256
 
 
 def sky_gradient(width: int, height: int) -> np.ndarray:
@@ -77,9 +80,45 @@ def render_view(
     return image
 
 
-def render_frame(scene, frame: int, camera: PinholeCamera, exclude_role: str | None = None, max_splat: int = 7) -> np.ndarray:
+def _unit_sphere(count: int) -> np.ndarray:
+    """`count` roughly equal-area directions on the unit sphere (Fibonacci lattice)."""
+    i = np.arange(count, dtype=np.float64) + 0.5
+    z = 1.0 - 2.0 * i / count
+    r = np.sqrt(np.clip(1.0 - z * z, 0.0, 1.0))
+    phi = np.pi * (1.0 + 5.0**0.5) * i
+    return np.stack([r * np.cos(phi), r * np.sin(phi), z], axis=1)
+
+
+def ball_cloud(center, radius: float = BALL_RADIUS_M, count: int = BALL_POINTS):
+    """The ball as splat points. The per-point radius is set so the splats just merge at any distance.
+
+    render_view sizes a splat as 2 * radius * f / z, so giving each point 2 * R / sqrt(count) of world
+    footprint keeps the sphere solid whether it is 1 m or 20 m away, with no special case for either.
+    """
+    directions = _unit_sphere(count)
+    points = (np.asarray(center, dtype=np.float64)[None, :] + directions * radius).astype(np.float32)
+    shade = 0.6 + 0.4 * (directions[:, 2] + 1.0) / 2.0  # a cheap overhead light, so it reads as a sphere
+    colors = np.clip(np.array(BALL_COLOR, dtype=np.float64)[None, :] * shade[:, None], 0, 255).astype(np.uint8)
+    radii = np.full(count, 2.0 * radius / np.sqrt(count), dtype=np.float32)
+    return points, colors, radii
+
+
+def render_frame(
+    scene,
+    frame: int,
+    camera: PinholeCamera,
+    exclude_role: str | None = None,
+    max_splat: int = 7,
+    ball_xyz=None,
+) -> np.ndarray:
     player_points, player_colors, player_radii = scene.players_at(frame, exclude_role=exclude_role)
-    points = np.concatenate([scene.background_points, player_points])
-    colors = np.concatenate([scene.background_colors, player_colors])
-    radii = np.concatenate([scene.background_radii, player_radii])
+    parts = [
+        (scene.background_points, scene.background_colors, scene.background_radii),
+        (player_points, player_colors, player_radii),
+    ]
+    if ball_xyz is not None:
+        parts.append(ball_cloud(ball_xyz))
+    points = np.concatenate([p for p, _, _ in parts])
+    colors = np.concatenate([c for _, c, _ in parts])
+    radii = np.concatenate([r for _, _, r in parts])
     return render_view(camera, scene.ground, points, colors, radii, max_splat=max_splat)

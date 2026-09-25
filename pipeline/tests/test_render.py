@@ -1,10 +1,12 @@
 import numpy as np
+import pytest
 from synthetic import broadcast_camera
 
+from horizon.ball import BALL_RADIUS_M
 from horizon.camera import PinholeCamera
 from horizon.ground import GroundTexture
 from horizon.reconstruct import Scene
-from horizon.render import render_frame, render_view, sky_gradient
+from horizon.render import ball_cloud, render_frame, render_view, sky_gradient
 
 RED, BLUE = (220, 30, 30), (30, 30, 220)
 
@@ -53,8 +55,9 @@ def test_splats_grow_when_the_camera_is_close():
     assert counts == [49, 4]
 
 
-def test_render_frame_can_hide_the_viewer():
-    scene = Scene(
+def two_player_scene() -> Scene:
+    """Two player points on the centre line, 5 m and 8 m out: near is RED, far is BLUE."""
+    return Scene(
         background_points=np.zeros((0, 3), np.float32),
         background_colors=np.zeros((0, 3), np.uint8),
         background_radii=np.zeros(0, np.float32),
@@ -67,7 +70,71 @@ def test_render_frame_can_hide_the_viewer():
         camera=broadcast_camera(),
         fps=25.0,
     )
+
+
+def test_render_frame_can_hide_the_viewer():
+    scene = two_player_scene()
     cam = PinholeCamera.look_at((0.0, 0.0, 1.0), (0.0, 1.0, 1.0), 60.0, 64, 36)
     center = int(round(cam.cy)), int(round(cam.cx))
     assert tuple(render_frame(scene, 0, cam)[center]) == RED
     assert tuple(render_frame(scene, 0, cam, exclude_role="near")[center]) == BLUE
+
+
+def ball_camera(width=160, height=90):
+    """Eye at the origin at 1 m, looking down +Y. A ball on the +Y axis lands on the principal point."""
+    return PinholeCamera.look_at((0.0, 0.0, 1.0), (0.0, 1.0, 1.0), 60.0, width, height)
+
+
+def ball_pixel_count(image):
+    """Pixels carrying a shaded tennis-ball colour. The RED and BLUE ground and players both fail the
+    green test, and the sky is far too dark, so only the ball is counted."""
+    pixels = image.astype(int)
+    return int(((pixels[..., 0] > 110) & (pixels[..., 1] > 120) & (pixels[..., 2] < 150)).sum())
+
+
+def test_ball_cloud_sits_on_a_sphere_of_the_right_size():
+    center = np.array([1.0, 2.0, 1.5])
+    points, colors, radii = ball_cloud(center)
+    assert points.shape == (256, 3) and colors.shape == (256, 3) and radii.shape == (256,)
+    assert points.dtype == np.float32 and colors.dtype == np.uint8 and radii.dtype == np.float32
+    distances = np.linalg.norm(points.astype(np.float64) - center, axis=1)
+    assert distances == pytest.approx(np.full(256, BALL_RADIUS_M), abs=1e-5)
+    assert colors[:, 1].mean() > colors[:, 2].mean()  # yellow-green: more green than blue
+
+
+def test_ball_cloud_is_shaded_brighter_on_top():
+    points, colors, _radii = ball_cloud(np.zeros(3))
+    top = points[:, 2] > 0
+    assert colors[top].astype(int).mean() > colors[~top].astype(int).mean()
+
+
+def test_render_frame_without_a_ball_is_unchanged():
+    scene, cam = two_player_scene(), ball_camera()
+    np.testing.assert_array_equal(render_frame(scene, 0, cam), render_frame(scene, 0, cam, ball_xyz=None))
+
+
+def test_render_frame_draws_the_ball_where_it_is_projected():
+    scene, cam = two_player_scene(), ball_camera()
+    center = np.array([0.0, 0.6, 1.0])
+    pixel = int(round(cam.cy)), int(round(cam.cx))
+    plain = render_frame(scene, 0, cam)
+    withball = render_frame(scene, 0, cam, ball_xyz=center)
+    assert tuple(plain[pixel]) == RED  # the near player, until the ball gets in front of them
+    assert tuple(withball[pixel]) != RED
+    assert ball_pixel_count(withball) > 10 and ball_pixel_count(plain) == 0
+
+
+def test_the_ball_grows_as_it_approaches():
+    scene = two_player_scene()
+
+    def count_at(distance):
+        return ball_pixel_count(render_frame(scene, 0, ball_camera(), ball_xyz=np.array([0.0, distance, 1.0])))
+
+    assert count_at(0.6) > count_at(2.5) > 0
+
+
+def test_a_ball_behind_the_camera_draws_nothing():
+    """Review Focus 5: nothing is smeared across the frame when the ball is not in front of the lens."""
+    scene, cam = two_player_scene(), ball_camera()
+    behind = np.array([0.0, -3.0, 1.0])  # the eye is at y = 0, looking towards +y
+    np.testing.assert_array_equal(render_frame(scene, 0, cam), render_frame(scene, 0, cam, ball_xyz=behind))
