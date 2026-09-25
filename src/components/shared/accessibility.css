@@ -1,0 +1,271 @@
+/* ═══════════════════════════════════════════════════════════════
+   ACCESSIBILITY STYLES
+   High contrast mode, reduced motion, and screen reader utilities
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Screen reader only - visually hidden but accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip to main content link */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  padding: 12px 24px;
+  background: #000;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 3px solid #fff;
+  border-radius: 8px;
+  transition: top 0.2s;
+}
+
+.skip-link:focus {
+  top: 16px;
+  outline: 3px solid #007AFF;
+  outline-offset: 2px;
+}
+
+/* Accessibility Toggle Button */
+.accessibility-toggle {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+}
+
+.accessibility-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.accessibility-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.accessibility-btn:focus-visible {
+  outline: 2px solid #007AFF;
+  outline-offset: 2px;
+}
+
+.accessibility-btn--active {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.accessibility-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.accessibility-btn-label {
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HIGH CONTRAST MODE
+   WCAG AAA compliant color ratios (7:1 minimum)
+   ═══════════════════════════════════════════════════════════════ */
+
+:root.high-contrast {
+  /* Override glass backgrounds with solid colors */
+  --glass-bg: rgba(0, 0, 0, 0.95);
+  --glass-bg-light: rgba(0, 0, 0, 0.9);
+  --glass-bg-dark: rgba(0, 0, 0, 0.98);
+  --glass-bg-darker: #000;
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-border-light: rgba(255, 255, 255, 0.7);
+
+  /* High contrast text colors */
+  --color-text: #ffffff;
+  --color-text-secondary: #ffffff;
+  --color-text-tertiary: #cccccc;
+
+  /* Increased visibility for status colors */
+  --color-live: #ff4444;
+  --color-live-glow: rgba(255, 68, 68, 0.6);
+  --color-primary: #4da6ff;
+  --color-success: #44ff77;
+  --color-warning: #ffaa00;
+}
+
+/* High contrast overrides for specific elements */
+.high-contrast .game-card {
+  background: #000;
+  border: 2px solid #fff;
+}
+
+.high-contrast .game-card:hover,
+.high-contrast .game-card:focus-visible {
+  border-color: #4da6ff;
+  box-shadow: 0 0 0 3px rgba(77, 166, 255, 0.4);
+}
+
+.high-contrast .game-card-team-name {
+  color: #fff;
+  font-weight: 600;
+}
+
+.high-contrast .game-card-live-text {
+  color: #ff4444;
+  font-weight: 700;
+}
+
+.high-contrast .game-card-footer {
+  color: #fff;
+}
+
+.high-contrast .player-card {
+  background: #000;
+  border: 2px solid #fff;
+}
+
+.high-contrast .player-card-name {
+  color: #fff;
+  font-weight: 600;
+}
+
+.high-contrast .controls-glass {
+  background: #000;
+  border: 2px solid #fff;
+}
+
+.high-contrast .controls-btn {
+  color: #fff;
+}
+
+.high-contrast .controls-progress-track {
+  background: rgba(255, 255, 255, 0.4);
+  height: 6px;
+}
+
+.high-contrast .controls-progress-fill {
+  background: #fff;
+}
+
+.high-contrast .controls-time {
+  color: #fff;
+}
+
+.high-contrast .home-button,
+.high-contrast .toggle-pov-button {
+  background: #000;
+  border: 2px solid #fff;
+  color: #fff;
+}
+
+.high-contrast .pov-glass-container {
+  background: #000;
+  border: 2px solid #fff;
+}
+
+.high-contrast .pov-player-name {
+  color: #fff;
+}
+
+.high-contrast .games-brand-title {
+  color: #fff;
+}
+
+.high-contrast .games-tagline {
+  color: #fff;
+}
+
+.high-contrast .processing-brand-title {
+  color: #fff;
+}
+
+/* Focus indicators in high contrast */
+.high-contrast :focus-visible {
+  outline: 3px solid #4da6ff;
+  outline-offset: 3px;
+}
+
+.high-contrast .accessibility-toggle {
+  background: #000;
+  border: 2px solid #fff;
+}
+
+.high-contrast .accessibility-btn {
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.high-contrast .accessibility-btn--active {
+  background: #fff;
+  color: #000;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REDUCED MOTION
+   Respects prefers-reduced-motion preference
+   ═══════════════════════════════════════════════════════════════ */
+
+:root.reduced-motion *,
+:root.reduced-motion *::before,
+:root.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Keep essential feedback animations but make them instant */
+:root.reduced-motion .controls-progress-fill {
+  transition: none;
+}
+
+/* System preference fallback */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --color-text-secondary: #ffffff;
+    --color-text-tertiary: #cccccc;
+  }
+}

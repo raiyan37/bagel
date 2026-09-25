@@ -1,0 +1,7 @@
+IDENTIFY THE MC
+
+result = queryApi(thread_id, f"Please process the video at {video_path} and identify the main character.")
+
+
+GET THE FULL STATS
+
