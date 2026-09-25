@@ -1,16 +1,14 @@
 <div align="center">
   <h1>Bagel</h1>
-  <em>You can be anyone.</em>
+  <em>A new way to view professional tennis.</em>
   <br /><br />
 
-  <a href="https://youtu.be/Wcb6SSw7LFY">Watch the demo</a>
+  <a href="">Watch the demo</a>
 </div>
 
 ## What this is
 
 Bagel is a proof-of-concept for **first-person sports viewing**: taking a normal broadcast clip and giving fans a player's-eye view of the action, on top of the usual scoreboard/highlight experience.
-
-The demo clip is a Premier League penalty shootout (Bruno Fernandes vs. David Raya). The web app plays the broadcast footage with a live scoreboard and goal celebration, while overlaying computer-vision-tracked player cards that expand into synced point-of-view video for each player on the pitch.
 
 ## How it works
 
@@ -33,7 +31,7 @@ The demo clip is a Premier League penalty shootout (Bruno Fernandes vs. David Ra
 
 ## Status
 
-This is an active prototype exploring how far a broadcast-only pipeline (no dedicated multi-camera rig) can go toward immersive, player-perspective sports content. The soccer demo above is functional end-to-end; a follow-on design (see [`docs/superpowers/`](docs/superpowers)) extends the same idea to tennis with full 3D scene reconstruction (monocular depth estimation, court calibration, and a free-roaming virtual camera).
+This is an active prototype exploring how far a broadcast-only pipeline (no dedicated multi-camera rig) can go toward immersive, player-perspective sports content. a follow-on design (see [`docs/superpowers/`](docs/superpowers)) extends the same idea to tennis with full 3D scene reconstruction (monocular depth estimation, court calibration, and a free-roaming virtual camera).
 
 ## Running locally
 
