@@ -112,3 +112,88 @@ def link_track(
     if not best_frames:
         return np.zeros(0, dtype=np.int64), np.zeros((0, 2), dtype=np.float64)
     return np.array(best_frames, dtype=np.int64), np.array(best_points, dtype=np.float64).reshape(-1, 2)
+
+
+GRAVITY = np.array([0.0, 0.0, -9.81])
+
+COURT_BOX_X = 20.0  # metres either side of the centre line; wider than this is not this rally
+COURT_BOX_Y = 30.0
+COURT_BOX_Z = 15.0
+
+
+def ballistic_positions(a: np.ndarray, v: np.ndarray, t: np.ndarray) -> np.ndarray:
+    """X(t) = a + v*t + 0.5*G*t^2 for each t, as (N, 3) world metres."""
+    t = np.atleast_1d(np.asarray(t, dtype=np.float64))
+    return a[None, :] + v[None, :] * t[:, None] + 0.5 * GRAVITY[None, :] * (t**2)[:, None]
+
+
+def segment_times(frames: np.ndarray, fps: float) -> np.ndarray:
+    """Seconds since the first observation. Every caller must derive t this way or the fit shifts."""
+    frames = np.asarray(frames, dtype=np.int64)
+    return (frames - frames[0]) / float(fps)
+
+
+def fit_ballistic(camera, frames, uv, fps: float, iterations: int = 2):
+    """Least-squares projectile through monocular observations. Returns (a, v).
+
+    X(t) is affine in (a, v), so clearing the projection denominator gives two linear equations per
+    observation (spec §2). That makes this one lstsq rather than a non-linear optimisation. Clearing the
+    denominator minimises algebraic error, which over-weights distant observations, so the solve is repeated
+    with w = 1/z from the previous estimate to approximate true reprojection error.
+    """
+    frames = np.asarray(frames, dtype=np.int64)
+    uv = np.asarray(uv, dtype=np.float64).reshape(-1, 2)
+    if len(frames) < 3:
+        raise ValueError(f"a ballistic fit needs at least 3 observations, got {len(frames)}")
+    t = segment_times(frames, fps)
+    projection = camera.projection_matrix
+    M, c = projection[:, :3], projection[:, 3]
+    quadratic = 0.5 * GRAVITY[None, :] * (t**2)[:, None]  # (N, 3), the known part of X(t)
+    known = quadratic @ M.T + c[None, :]  # (N, 3), k_i(t)
+
+    rows = np.empty((2 * len(t), 6))
+    rhs = np.empty(2 * len(t))
+    for axis, numerator in enumerate((0, 1)):  # axis 0 is u against row 0, axis 1 is v against row 1
+        coefficient = uv[:, axis][:, None] * M[2][None, :] - M[numerator][None, :]  # (N, 3)
+        rows[axis::2, :3] = coefficient
+        rows[axis::2, 3:] = coefficient * t[:, None]
+        rhs[axis::2] = known[:, numerator] - uv[:, axis] * known[:, 2]
+
+    weights = np.ones(2 * len(t))
+    solution = np.zeros(6)
+    for _ in range(iterations + 1):
+        solution, _residual, rank, _singular = np.linalg.lstsq(rows * weights[:, None], rhs * weights, rcond=None)
+        if rank < 6:
+            raise ValueError(
+                "rank-deficient fit: these observations do not determine a trajectory "
+                "(the ball barely moves in the image)"
+            )
+        a, v = solution[:3], solution[3:]
+        depth = ballistic_positions(a, v, t) @ M[2] + c[2]
+        if not np.all(np.isfinite(depth)) or np.any(np.abs(depth) < 1e-6):
+            break
+        weights = np.repeat(1.0 / np.abs(depth), 2)
+    return solution[:3], solution[3:]
+
+
+def reprojection_residuals(camera, a: np.ndarray, v: np.ndarray, t: np.ndarray, uv: np.ndarray) -> np.ndarray:
+    """Pixel distance between each observation and where the fitted trajectory says it should be."""
+    uv = np.asarray(uv, dtype=np.float64).reshape(-1, 2)
+    projected, _depth = camera.project(ballistic_positions(a, v, t))
+    return np.linalg.norm(np.nan_to_num(projected, nan=1e9, posinf=1e9, neginf=1e9) - uv, axis=1)
+
+
+def is_plausible(a: np.ndarray, v: np.ndarray, t: np.ndarray, max_speed_ms: float = 90.0) -> bool:
+    """Reject fits that no tennis ball could produce, including a near-degenerate solve's wild output."""
+    if not (np.all(np.isfinite(a)) and np.all(np.isfinite(v))):
+        return False
+    points = ballistic_positions(a, v, t)
+    speeds = np.linalg.norm(v[None, :] + GRAVITY[None, :] * t[:, None], axis=1)
+    return bool(
+        np.all(np.isfinite(points))
+        and np.all(points[:, 2] > -0.25)
+        and np.all(points[:, 2] < COURT_BOX_Z)
+        and np.all(np.abs(points[:, 0]) < COURT_BOX_X)
+        and np.all(np.abs(points[:, 1]) < COURT_BOX_Y)
+        and np.all(speeds < max_speed_ms)
+    )
