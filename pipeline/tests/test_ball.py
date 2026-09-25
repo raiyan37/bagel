@@ -5,6 +5,7 @@ from synthetic import broadcast_camera
 from horizon.ball import (
     GRAVITY,
     BallTrack,
+    ball_candidates,
     ballistic_positions,
     build_ball_track,
     detect_candidates,
@@ -15,6 +16,9 @@ from horizon.ball import (
     split_flights,
 )
 from horizon.paths import MatchPaths
+from horizon.players import PlayerTrack, Players
+from horizon.tracking import Detections
+from horizon.video import H264Writer
 
 
 def court_plate(height=120, width=160):
@@ -282,3 +286,22 @@ def test_ball_track_position_is_none_outside_the_clip():
 
 def test_match_paths_expose_the_ball_artifact(tmp_path):
     assert MatchPaths.for_match("demo", tmp_path).ball == tmp_path / "demo" / "ball.json"
+
+
+def test_ball_candidates_finds_the_ball_in_a_written_clip(tmp_path):
+    plate = court_plate(96, 160)
+    positions = [(30 + 8 * i, 20 + 3 * i) for i in range(12)]
+    path = tmp_path / "clip.mp4"
+    with H264Writer(path, 160, 96, 25.0) as writer:
+        for u, v in positions:
+            writer.write(with_ball(plate, u, v, radius=3))
+    count = len(positions)
+    detections = Detections(160, 96, 25.0, [[] for _ in positions])
+    absent = PlayerTrack(
+        "near", "Near", "", [None] * count, [None] * count,
+        np.zeros((count, 2)), 1.85, np.zeros(count), np.zeros(count),
+    )
+    players = Players(25.0, count, {"near": absent})
+    candidates = ball_candidates(path, count, detections, players)
+    assert len(candidates) == count
+    assert sum(1 for frame in candidates if frame) >= 9  # H.264 is lossy; a couple of frames may drop out

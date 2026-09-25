@@ -321,3 +321,44 @@ def build_ball_track(
         reprojection_rms_px=float(np.sqrt(squared / observations)) if observations else 0.0,
         segments=[(s.start, s.end) for s in flights],
     )
+
+
+def ball_candidates(
+    video_path: Path,
+    frame_count: int,
+    detections: Detections,
+    players: Players,
+    samples: int = 24,
+    diff_threshold: int = 28,
+    yellow_threshold: int = 25,
+    dilate_px: int = 21,
+    log=None,
+) -> list[list[tuple[float, float]]]:
+    """Per-frame ball candidates for a whole clip.
+
+    The clip is decoded twice: once to build a masked-median clean plate over `samples` evenly spaced frames,
+    and once to difference every frame against it.
+    """
+    from horizon.reconstruct import median_plate  # local: keeps horizon.render free of this import chain
+
+    log = log or (lambda _message: None)
+    wanted = set(np.linspace(0, frame_count - 1, min(samples, frame_count)).round().astype(int).tolist())
+    plate_frames, plate_masks = [], []
+    for index, rgb in iter_frames(video_path, stop=frame_count):
+        if index in wanted:
+            plate_frames.append(rgb)
+            plate_masks.append(player_exclusion(detections, players, index, dilate_px=1))
+    plate = median_plate(plate_frames, plate_masks)
+    log(f"ball: clean plate from {len(plate_frames)} frames")
+
+    candidates: list[list[tuple[float, float]]] = []
+    for index, rgb in iter_frames(video_path, stop=frame_count):
+        exclude = player_exclusion(detections, players, index, dilate_px=dilate_px)
+        candidates.append(
+            detect_candidates(rgb, plate, exclude, diff_threshold=diff_threshold, yellow_threshold=yellow_threshold)
+        )
+        if index % 50 == 0:
+            log(f"  ball: frame {index}/{frame_count}")
+    while len(candidates) < frame_count:  # fewer decoded frames than expected: empty tail
+        candidates.append([])
+    return candidates
