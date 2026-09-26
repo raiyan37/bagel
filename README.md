@@ -2,6 +2,8 @@
 
 <p align="center"><em>A new way to view professional tennis.</em></p>
 
+<p align="center"><img src="docs/media/demo.gif" alt="Bagel demo: a broadcast tennis clip, then the 3D free camera orbiting the reconstructed court" width="800"></p>
+
 <!-- <p align="center"><a href="DEMO_URL">Watch the demo</a></p> -->
 
 ---
