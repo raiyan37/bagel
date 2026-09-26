@@ -1,104 +1,181 @@
-# Project Horizon · Tennis
+<h1 align="center">Bagel</h1>
 
-See the rally through the eyes of both players, or drop your own camera anywhere on court.
+<p align="center"><em>A new way to view professional tennis.</em></p>
 
-A broadcast tennis clip goes through an offline Python pipeline (`pipeline/`):
-- It calibrates the court from clicked keypoints.
-- It tracks every person (YOLO26-seg + ByteTrack).
-- It identifies the two players with TwelveLabs Pegasus + Gemini, orchestrated by Backboard.
-- It lifts the scene into 3D with a monocular depth model (Depth Anything V2) aligned to the court geometry.
-- It renders first-person POV videos for both players.
+<!-- <p align="center"><a href="DEMO_URL">Watch the demo</a></p> -->
 
-A Viser app (`horizon view`) gives you a free-placement 3D camera. The React app (`src/`) plays everything back with POV cards pinned above the players.
+---
 
-Design: `docs/superpowers/specs/2026-09-20-tennis-horizon-design.md`
+## What this is
+
+Bagel turns a single broadcast tennis clip into something you can watch from *inside* the point: follow a rally through either player's eyes, or put a free camera anywhere on court.
+
+## How it works
+
+An offline Python pipeline (`pipeline/`) processes one broadcast clip:
+
+1. **Court calibration**: you click a few court keypoints; the pipeline solves the broadcast camera.
+2. **Tracking**: YOLO26-seg + ByteTrack follow every person in frame.
+3. **Player identification**: TwelveLabs Pegasus (Amazon Bedrock) and Gemini (OpenRouter), orchestrated by Backboard, pick out the two players.
+4. **3D reconstruction**: Depth Anything V2 lifts the scene into 3D, aligned to the court geometry.
+5. **Rendering**: first-person POV videos are rendered for both players.
+
+Two apps show the results:
+
+- **3D viewer** (`horizon view`, built on Viser): a free-placement camera at `http://localhost:8080`.
+- **Web app** (`src/`, React 19 + Vite): plays the match back with POV cards pinned above the players and embeds the 3D viewer in its Free camera panel.
+
+Design doc: [`docs/superpowers/specs/2026-09-20-tennis-horizon-design.md`](docs/superpowers/specs/2026-09-20-tennis-horizon-design.md)
+
+## Tech stack
+
+| Layer | Tools |
+|---|---|
+| Web app | React 19, TypeScript, Vite 7, React Router 7, Vitest |
+| Computer vision | YOLO26-seg, ByteTrack, OpenCV, Depth Anything V2 (PyTorch + Transformers) |
+| AI / video understanding | TwelveLabs Pegasus 1.2 (Amazon Bedrock), Gemini (OpenRouter), Backboard |
+| 3D viewer | Viser |
+| Tooling | npm, uv, ESLint, pytest |
 
 ## Requirements
 
-- Windows 10/11 with an NVIDIA GPU (developed on an RTX 3060 Ti, 8 GB). A CPU works but is slow.
-- Node 24 + npm, Python 3.11, [uv](https://docs.astral.sh/uv/), Git
-- Keys:
-  - AWS with Bedrock model access to **TwelveLabs Pegasus 1.2** (us-east-1)
-  - OpenRouter
-  - Backboard. Optional: use `--orchestrator direct` to skip Backboard, or `none` to skip all AI services.
+**System**
+
+- Windows 10/11
+- NVIDIA GPU recommended (developed on an RTX 3060 Ti, 8 GB). CPU works but is slow.
+
+**Software**
+
+- [Node.js 24](https://nodejs.org/) + npm
+- [Python 3.11](https://www.python.org/) (3.11 or 3.12 supported)
+- [uv](https://docs.astral.sh/uv/)
+- Git
+
+**API keys** (only needed for player identification)
+
+| Service | Used for | Env var |
+|---|---|---|
+| AWS Bedrock, with model access to **TwelveLabs Pegasus 1.2** in `us-east-1` | Video understanding | AWS credentials via `aws configure`, plus `AWS_REGION` |
+| [OpenRouter](https://openrouter.ai/) | Gemini | `OPENROUTER_API_KEY` |
+| Backboard *(optional)* | Orchestration | `BACKBOARD_API_KEY` |
+
+No keys? Use `--orchestrator direct` to skip Backboard, or `--orchestrator none` to skip all AI services.
 
 ## Setup
 
-```powershell
-# web app
-npm install
+### 1. Web app
 
-# pipeline
+```powershell
+npm install
+```
+
+### 2. Pipeline
+
+```powershell
 cd pipeline
 uv venv --python 3.11 .venv
+
+# PyTorch with CUDA 12.8 (drop --index-url for a CPU-only install)
 uv pip install --python .venv\Scripts\python.exe torch torchvision --index-url https://download.pytorch.org/whl/cu128
+
+# Pipeline + ML models + 3D viewer + test tools
 uv pip install --python .venv\Scripts\python.exe -e ".[ml,viewer,dev]"
-Copy-Item .env.example .env   # then fill in the keys
+```
+
+### 3. Environment
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Fill in the keys in `pipeline\.env`, then check everything is wired up:
+
+```powershell
 .venv\Scripts\python -m horizon doctor
 ```
 
-## Process a clip
+## Usage
 
-Use one continuous shot from the main broadcast camera: 3–20 s, both players visible, no cuts or zoom.
+### 1. Process a clip
+
+Use one continuous shot from the main broadcast camera: **3–20 s, both players visible, no cuts or zoom.**
 
 ```powershell
 cd pipeline
 .venv\Scripts\python -m horizon all C:\path\to\match.mp4 --match-id demo --start 12 --duration 10
 ```
 
-A window opens on the first frame. Click each keypoint named at the top; the red dot in the mini-court shows where it is.
-- `S` skips a keypoint you can't see.
-- `U` undoes the last click.
-- `Enter` solves once you have at least 4 points.
+A calibration window opens on the first frame. Click each keypoint named at the top; the red dot on the mini-court shows where it is.
 
-Check `data\demo\calibration_preview.jpg`: the red court lines must sit on the painted lines.
+| Key | Action |
+|---|---|
+| `S` | Skip a keypoint you can't see |
+| `U` | Undo the last click |
+| `Enter` | Solve (needs at least 4 points) |
 
-A match id that already has a `calibration.json` reuses it instead of asking for the clicks again, and prints which file it reused. Pass `--recalibrate` whenever the clip comes from a different camera, angle or match.
+Then open `data\demo\calibration_preview.jpg` and check that the red lines sit on the painted court lines.
 
-Individual steps: `init`, `calibrate`, `track`, `identify`, `players`, `reconstruct`, `render`, `export`. Run `python -m horizon <step> --help` for options.
+Re-running with the same `--match-id` reuses the saved `calibration.json`. Pass `--recalibrate` when the clip comes from a different camera, angle or match.
 
-## Explore
+To run steps individually: `init`, `calibrate`, `track`, `identify`, `players`, `reconstruct`, `render`, `export`. See `python -m horizon <step> --help`.
+
+### 2. Watch it
+
+Run both apps side by side, one per terminal:
 
 ```powershell
-# terminal 1: 3D free camera (http://localhost:8080)
+# Terminal 1: 3D viewer -> http://localhost:8080
 cd pipeline
 .venv\Scripts\python -m horizon view --match-id demo
+```
 
-# terminal 2: web app (http://localhost:5173)
+```powershell
+# Terminal 2: web app -> http://localhost:5173
 npm run dev
 ```
 
-In the viewer:
-- Drag the white gizmo to place the free camera, or use **Snap to near/far player**.
+The web app's **Free camera** panel embeds the 3D viewer, so it stays blank until terminal 1 is running.
+
+**In the 3D viewer**
+
+- Drag the white gizmo to place the camera, or use **Snap to near/far player**.
 - **Follow** attaches the camera to a player: `eyes` is first person, `chase` is behind and above.
 - **Look through free camera** shows its view live.
-- **Export free-cam clip** writes `free_cam.mp4`. Then run `horizon export --match-id demo` to publish it to the web app's FREE CAM panel.
+- **Export clip** writes `free_cam.mp4`. Run `horizon export --match-id demo` to publish it to the web app.
 
-## Tests
+## Scripts
 
-```powershell
-cd pipeline; .venv\Scripts\python -m pytest -q; cd ..
-npm test
-```
+| Command | What it does |
+|---|---|
+| `npm run dev` | Start the web app dev server |
+| `npm run build` | Type-check and build for production |
+| `npm run lint` | Lint the web app |
+| `npm test` | Run web app tests (Vitest) |
+| `cd pipeline; .venv\Scripts\python -m pytest -q` | Run pipeline tests |
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
+| Free camera panel is blank | Start `horizon view --match-id <id>` in a second terminal |
 | `yolo26s-seg.pt` not found | `horizon track --match-id demo --model yolo11s-seg.pt` |
-| OpenRouter 404 / model not found | Set `GEMINI_MODEL_ID` in `pipeline\.env` to a current id from https://openrouter.ai/google |
-| Pegasus `AccessDeniedException` | Enable TwelveLabs Pegasus in the Bedrock console (Model access) for `AWS_REGION` |
+| OpenRouter 404 / model not found | Set `GEMINI_MODEL_ID` in `pipeline\.env` to a current id from [openrouter.ai/google](https://openrouter.ai/google) |
+| Pegasus `AccessDeniedException` | Enable TwelveLabs Pegasus under Bedrock → Model access for your `AWS_REGION` |
 | Pegasus rejects the clip (>25 MB) | Re-run `horizon init` with a shorter `--duration` or `--max-height 540` |
 | Backboard errors | `horizon identify --match-id demo --orchestrator direct` |
-| Wrong player chosen | Read the warnings in `identity.json`; re-run `identify` with `--frame N`, choosing a frame where both players are clearly visible |
+| Wrong player chosen | Check warnings in `identity.json`; re-run `identify --frame N` on a frame where both players are clearly visible |
 | Calibration RMS > 4 px | `horizon calibrate --match-id demo` and click more keypoints (service-line T's help) |
-| FREE CAM panel blank | Start `horizon view --match-id demo`; the panel embeds http://localhost:8080 |
 | Sparse point cloud | `horizon reconstruct --match-id demo --stride 1 --depth-model depth-anything/Depth-Anything-V2-Base-hf` |
 
 ## Known limitations
 
-A single camera cannot see everything.
-- The far player's POV looks back towards the broadcast camera, where nothing was filmed, so that area is sky or fill colour.
-- Players are 2.5-D, like billboards.
+A single camera can't see everything:
 
-See spec §7.
+- The far player's POV looks back toward the broadcast camera, where nothing was filmed, so that area is filled with sky or a flat colour.
+- Players are 2.5D, like billboards.
+
+See §7 of the design doc.
+
+## Accessibility
+
+High-contrast mode, reduced motion, full keyboard navigation and ARIA live announcements. The app respects the OS-level `prefers-reduced-motion` and `prefers-contrast` settings. See [`accessibility.md`](accessibility.md).
