@@ -14,9 +14,22 @@ The repo ships with a processed sample match (`ao`), so you can try everything w
 
 Works on **macOS** and **Windows**. Commands are the same on both unless a step shows separate versions. Use Terminal on macOS and PowerShell on Windows.
 
-## Quick start (about 5 minutes)
+## Required vs optional
 
-### 1. Install the tools
+**To get Bagel running, you only need the Quick start below.** Everything else is optional.
+
+| | What | Needed for |
+|---|---|---|
+| ✅ **Required** | [Quick start](#quick-start-required) steps 1–3: install tools, install dependencies, run the viewer and the web app | Watching the sample match: POV cards, player views and the 3D free camera |
+| ⬜ Optional | [Exporting a free-camera clip](#using-the-3d-viewer) | Saving a video of your own camera path |
+| ⬜ Optional | [Process your own clip](#process-your-own-clip-optional) | Turning a new broadcast video into a match. Needs PyTorch, and API keys for automatic player identification |
+| ⬜ Optional | [Scripts](#scripts) (build, lint, tests) | Developing Bagel itself |
+
+## Quick start (required)
+
+About 5 minutes. **Every step in this section is required.**
+
+### 1. Install the tools (required)
 
 You need [Git](https://git-scm.com/downloads), [Node.js 24](https://nodejs.org/) and [uv](https://docs.astral.sh/uv/). uv is a Python package manager that downloads Python for you.
 
@@ -34,7 +47,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 Close and reopen your terminal afterwards so `uv` is found.
 
-### 2. Get the code and install dependencies
+### 2. Get the code and install dependencies (required)
 
 Run this once, from wherever you keep projects:
 
@@ -48,11 +61,11 @@ uv pip install -e ".[viewer]"
 cd ..
 ```
 
-### 3. Run it
+### 3. Run it (required)
 
-You need **two terminals**, both opened in the `bagel` folder.
+You need **two terminals**, both opened in the `bagel` folder, and both must stay running.
 
-**Terminal 1: 3D viewer**
+**Terminal 1: 3D viewer (required for the Free camera)**
 
 ```bash
 cd pipeline
@@ -61,7 +74,7 @@ uv run --no-sync horizon view --match-id ao
 
 Wait for `Viewer running at http://localhost:8080`, then leave it running.
 
-**Terminal 2: web app**
+**Terminal 2: web app (required)**
 
 ```bash
 npm run dev
@@ -71,6 +84,8 @@ Open **http://localhost:5173** and pick the match. The **Free camera** button sh
 
 Press `Ctrl+C` in each terminal to stop.
 
+**That's it: Bagel is fully working.** Everything below is optional.
+
 > **Why `uv run --no-sync`?** It runs the pipeline's own Python environment (`pipeline/.venv`) without you having to activate it, and `--no-sync` stops uv from changing what's installed. Run all `horizon` commands from the `pipeline` folder.
 
 ## Using the 3D viewer
@@ -79,25 +94,26 @@ Press `Ctrl+C` in each terminal to stop.
 - Drag the white gizmo to place the free camera, or use **Snap to near/far player**.
 - **Follow** attaches the camera to a player: `eyes` is first person, `chase` is behind and above.
 - **Look through free camera** shows its view live.
-- **Export clip** writes `free_cam.mp4`. Run `uv run --no-sync horizon export --match-id ao` to show it in the web app's Free camera panel.
+- **Export clip** *(optional)* writes `free_cam.mp4`. To show it in the web app's Free camera panel, run this from the `pipeline` folder:
 
-## Process your own clip
+```bash
+uv run --no-sync horizon export --match-id ao
+```
 
-This needs the full install and API keys. An NVIDIA GPU is strongly recommended; on a Mac, processing runs on the CPU and is slow, but the results are the same.
+## Process your own clip (optional)
 
-### API keys
+**Skip this section unless you want to use your own video.** The sample match already works without it.
 
-Keys are only used for player identification:
+An NVIDIA GPU is strongly recommended; on a Mac, processing runs on the CPU and is slow, but the results are the same.
 
-| Service | Used for | Setting in `pipeline/.env` |
-|---|---|---|
-| AWS Bedrock, with model access to **TwelveLabs Pegasus 1.2** in `us-east-1` | Video understanding | AWS credentials via `aws configure`, plus `AWS_REGION` |
-| [OpenRouter](https://openrouter.ai/) | Gemini | `OPENROUTER_API_KEY` |
-| Backboard *(optional)* | Orchestration | `BACKBOARD_API_KEY` |
+| Step | Status |
+|---|---|
+| Install PyTorch + ML packages | ✅ Required for processing |
+| API keys | ⬜ Optional: without them, add `--orchestrator none`; players are picked by court position and named "Near player" / "Far player" |
+| `horizon doctor` | ⬜ Optional: checks your setup |
+| Run the pipeline | ✅ Required for processing |
 
-No keys? Add `--orchestrator direct` to skip Backboard, or `--orchestrator none` to skip all AI services.
-
-### Full install
+### 1. Full install (required for processing)
 
 From the `pipeline` folder, install PyTorch for your machine first:
 
@@ -119,6 +135,18 @@ Then, on either OS:
 uv pip install -e ".[ml,viewer,dev]"
 ```
 
+### 2. API keys (optional)
+
+Skip this if you don't have keys; use `--orchestrator none` in step 3 instead. Keys are only used for automatic player identification:
+
+| Service | Used for | Setting in `pipeline/.env` |
+|---|---|---|
+| AWS Bedrock, with model access to **TwelveLabs Pegasus 1.2** in `us-east-1` | Video understanding | AWS credentials via `aws configure`, plus `AWS_REGION` |
+| [OpenRouter](https://openrouter.ai/) | Gemini | `OPENROUTER_API_KEY` |
+| Backboard *(optional even with keys)* | Orchestration | `BACKBOARD_API_KEY` |
+
+With AWS and OpenRouter but no Backboard key, use `--orchestrator direct` in step 3.
+
 Create your settings file:
 
 **macOS**
@@ -133,15 +161,15 @@ cp .env.example .env
 Copy-Item .env.example .env
 ```
 
-Fill in the keys in `pipeline/.env`, then check the setup:
+Fill in the keys in `pipeline/.env`. Optionally, check the setup:
 
 ```bash
 uv run --no-sync horizon doctor
 ```
 
-### Run the pipeline
+### 3. Run the pipeline (required for processing)
 
-Use one continuous shot from the main broadcast camera: **3–20 s, both players visible, no cuts or zoom.** Pick any match id (lowercase letters, digits, `-`); `myclip` is used below.
+Use one continuous shot from the main broadcast camera: **3–20 s, both players visible, no cuts or zoom.** Pick any match id (lowercase letters, digits, `-`); `myclip` is used below. If you skipped step 2, add `--orchestrator none` to the end of the command.
 
 **macOS**
 
@@ -173,7 +201,7 @@ uv run --no-sync horizon view --match-id myclip
 
 Re-running with the same id reuses the saved `calibration.json`. Pass `--recalibrate` if the clip comes from a different camera, angle or match.
 
-To run steps one at a time: `init`, `calibrate`, `track`, `identify`, `players`, `ball`, `reconstruct`, `render`, `export`. See `uv run --no-sync horizon <step> --help`.
+*(Optional)* To run steps one at a time instead of `all`: `init`, `calibrate`, `track`, `identify`, `players`, `ball`, `reconstruct`, `render`, `export`. See `uv run --no-sync horizon <step> --help`.
 
 ## How it works
 
@@ -201,13 +229,15 @@ Design doc: [`docs/superpowers/specs/2026-09-20-tennis-horizon-design.md`](docs/
 
 ## Scripts
 
-| Command | Run from | What it does |
-|---|---|---|
-| `npm run dev` | `bagel` | Start the web app |
-| `npm run build` | `bagel` | Type-check and build for production |
-| `npm run lint` | `bagel` | Lint the web app |
-| `npm test` | `bagel` | Web app tests |
-| `uv run --no-sync pytest -q` | `pipeline` | Pipeline tests (needs the full install) |
+Only `npm run dev` is needed to use Bagel, and it's already covered in the Quick start. The rest are for development.
+
+| Command | Status | Run from | What it does |
+|---|---|---|---|
+| `npm run dev` | ✅ Required | `bagel` | Start the web app |
+| `npm run build` | ⬜ Optional | `bagel` | Type-check and build for production |
+| `npm run lint` | ⬜ Optional | `bagel` | Lint the web app |
+| `npm test` | ⬜ Optional | `bagel` | Web app tests |
+| `uv run --no-sync pytest -q` | ⬜ Optional | `pipeline` | Pipeline tests (needs the full install) |
 
 ## Troubleshooting
 
