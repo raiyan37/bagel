@@ -1,0 +1,105 @@
+/* Transport controls: collapsed to a single tab, expanded into a strip. */
+
+.controls-glass {
+  position: absolute;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: rgba(6, 35, 47, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--line-2);
+}
+
+.controls-glass-bg,
+.controls-glass-surface,
+.controls-btn-bg {
+  display: none;
+}
+
+.controls-content {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.45rem 0.6rem;
+}
+
+.controls-glass--expanded .controls-content {
+  width: min(40rem, 70vw);
+}
+
+.controls-toggle,
+.controls-btn {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  color: var(--ink-2);
+  transition: color var(--step);
+}
+
+.controls-toggle:hover,
+.controls-btn:hover {
+  color: var(--chalk);
+}
+
+.controls-toggle svg,
+.controls-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.controls-btn--play {
+  color: var(--chalk);
+}
+
+.controls-progress-section {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.controls-time {
+  font-size: 0.75rem;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.controls-time--dim {
+  color: var(--ink-3);
+}
+
+.controls-progress {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0;
+  cursor: pointer;
+}
+
+/* The scrubber is a court line; the played part is chalked in. */
+.controls-progress-track {
+  position: relative;
+  height: 1px;
+  background: var(--line-1);
+}
+
+.controls-progress-fill {
+  height: 100%;
+  background: var(--ball);
+}
+
+.controls-progress-handle {
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  border-radius: var(--radius-full);
+  background: var(--ball);
+  transform: translateY(-50%);
+}

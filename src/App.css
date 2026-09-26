@@ -1,9 +1,3 @@
-/* ═══════════════════════════════════════════════════════════════
-   APP LAYOUT - Liquid Glass Sports Streaming
-   ═══════════════════════════════════════════════════════════════ */
-
-@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap');
-
 .app {
   position: relative;
   width: 100%;
@@ -12,120 +6,76 @@
   background: #000;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   HOME BUTTON - Glass Style
-   ═══════════════════════════════════════════════════════════════ */
+/* ---- floating chrome over the broadcast --------------------------------- */
 
-.home-button {
+.chrome {
   position: absolute;
-  top: 28px;
-  left: 28px;
+  top: 1.25rem;
+  left: 1.25rem;
   z-index: 100;
   display: flex;
+  gap: 1px;
+  background: var(--line-2);
+  border: 1px solid var(--line-2);
+}
+
+.chrome-btn {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  color: rgba(255, 255, 255, 0.7);
+  gap: 0.45rem;
+  padding: 0.5rem 0.8rem;
+  background: rgba(6, 35, 47, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--ink-2);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 400;
   cursor: pointer;
-  opacity: 0;
-  animation: homeButtonAppear 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
-  transition: all 0.3s ease;
+  transition: color var(--step), background var(--step);
 }
 
-@keyframes homeButtonAppear {
-  from {
-    opacity: 0;
-    transform: translateX(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.chrome-btn:hover {
+  color: var(--chalk);
+  background: rgba(14, 60, 82, 0.92);
 }
 
-.home-button:hover {
-  background: rgba(0, 0, 0, 0.85);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.95);
+.chrome-btn[aria-pressed='true'] {
+  color: var(--ball);
 }
 
-.home-button svg {
+.chrome-btn:focus-visible {
+  outline: 2px solid var(--ball);
+  outline-offset: -2px;
+}
+
+.chrome-btn svg {
   width: 14px;
   height: 14px;
 }
 
-.home-button span {
-  font-family: 'Geist Mono', monospace;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
+/* ---- focus mode: broadcast + player views only -------------------------- */
 
-/* Toggle POV Button */
-.toggle-pov-button {
+.focus-hint {
   position: absolute;
-  top: 28px;
-  left: 110px;
+  bottom: 1.25rem;
+  right: 1.25rem;
   z-index: 100;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  opacity: 0;
-  animation: homeButtonAppear 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
-  transition: all 0.3s ease;
-}
-
-.toggle-pov-button:hover {
-  background: rgba(0, 0, 0, 0.85);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.toggle-pov-button svg {
-  width: 14px;
-  height: 14px;
-}
-
-.toggle-pov-button span {
-  font-family: 'Geist Mono', monospace;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-/* Player Card Wrapper for Positioning */
-.player-card-wrapper {
-  position: absolute;
-  z-index: 50;
-  animation: cardFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  opacity: 0;
+  margin: 0;
+  color: var(--ink-2);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 400;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
+  pointer-events: none;
   user-select: none;
+  animation: focusHintIn var(--step) both;
 }
 
-.player-card-wrapper.dragging {
-  z-index: 100;
-  opacity: 0.9;
-}
-
-@keyframes cardFadeIn {
+@keyframes focusHintIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -133,8 +83,15 @@
   }
 }
 
-/* Responsive Adjustments */
-@media (max-width: 1200px) {
+/* ---- player cards pinned to the players --------------------------------- */
+
+.player-card-wrapper {
+  position: absolute;
+  z-index: 50;
+  user-select: none;
+}
+
+@media (max-width: 75rem) {
   .player-card-wrapper {
     transform: scale(0.9);
     transform-origin: bottom left;
@@ -145,7 +102,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 48rem) {
   .player-card-wrapper {
     display: none;
   }

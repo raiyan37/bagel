@@ -171,14 +171,7 @@ export const StreamContainer = forwardRef<StreamContainerRef, StreamContainerPro
             />
           ) : (
             <div className="stream-video-placeholder">
-              <div className="field-lines">
-                <div className="field-center-circle" />
-                <div className="field-center-line" />
-                <div className="field-penalty-left" />
-                <div className="field-penalty-right" />
-                <div className="field-goal-left" />
-                <div className="field-goal-right" />
-              </div>
+              <p>This match has no video yet. Export it from the pipeline to watch it here.</p>
             </div>
           )}
           <div className="stream-overlay">{children}</div>

@@ -1,0 +1,231 @@
+.home {
+  min-height: 100vh;
+  background: var(--court-deep);
+  padding: clamp(3rem, 9vh, 6rem) var(--gutter) 4rem;
+  overflow-y: auto;
+}
+
+.home-inner {
+  max-width: 44rem;
+  margin: 0 auto;
+}
+
+/* ---- masthead ---------------------------------------------------------- */
+
+.wordmark {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(3.4rem, 11vw, 5.75rem);
+  line-height: 0.88;
+  letter-spacing: -0.035em;
+  color: var(--chalk);
+}
+
+.wordmark--small {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.home-title {
+  max-width: var(--measure);
+  margin-top: 2.1rem;
+  font-size: clamp(1.8rem, 4.2vw, 2.65rem);
+  color: var(--chalk);
+}
+
+.home-lede {
+  max-width: var(--measure);
+  margin-top: 1rem;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--ink-2);
+}
+
+/* ---- the court --------------------------------------------------------- */
+
+.home-court {
+  max-width: 54rem;
+  margin: clamp(2rem, 6vh, 3.5rem) auto clamp(1.5rem, 4vh, 2.5rem);
+}
+
+.court {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: var(--chalk);
+  overflow: visible;
+}
+
+.court-lines {
+  opacity: 0.55;
+  stroke-dasharray: 1500;
+  stroke-dashoffset: 1500;
+  animation: court-draw 1.5s cubic-bezier(0.32, 0.9, 0.35, 1) 0.15s both;
+}
+
+.court-net {
+  stroke: var(--chalk);
+  opacity: 0;
+  animation: court-fade 0.6s ease 1.1s both;
+}
+
+@keyframes court-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes court-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.85;
+  }
+}
+
+.court-mark {
+  opacity: 0;
+  animation: court-fade 0.5s ease both;
+  animation-delay: calc(1.25s + var(--i) * 0.12s);
+}
+
+.court-mark circle {
+  fill: var(--chalk);
+}
+
+.court-mark text {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 400;
+  fill: var(--ink-2);
+  text-anchor: middle;
+}
+
+.court-mark--free circle {
+  fill: none;
+  stroke: var(--ball);
+}
+
+.court-mark--free text {
+  fill: var(--ball);
+}
+
+/* ---- match list -------------------------------------------------------- */
+
+.home-count {
+  margin-bottom: 0.9rem;
+  font-size: 0.85rem;
+  color: var(--ink-3);
+}
+
+.match-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.match-row {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.35rem 0;
+  cursor: pointer;
+}
+
+.match-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.match-names {
+  font-size: clamp(1.25rem, 3.4vw, 1.6rem);
+  color: var(--ink-1);
+  transition: color var(--step);
+}
+
+.match-v {
+  font-style: italic;
+  color: var(--ink-3);
+  transition: color var(--step);
+}
+
+.match-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: var(--ink-3);
+  transition: color var(--step);
+}
+
+.match-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--ball);
+}
+
+.match-row:hover .match-status,
+.match-row:focus-visible .match-status {
+  color: var(--ink-2);
+}
+
+.match-row:hover .match-v,
+.match-row:focus-visible .match-v {
+  color: var(--ink-2);
+}
+
+/* The line under the hovered row lights up, the way a called line does. */
+.match-row:hover .match-rule,
+.match-row:focus-visible .match-rule {
+  background: var(--line-1);
+}
+
+.match-row:hover .match-rule::after,
+.match-row:focus-visible .match-rule::after {
+  background: var(--ball);
+}
+
+.match-row:focus-visible {
+  outline: 2px solid var(--ball);
+  outline-offset: 6px;
+}
+
+/* ---- notes ------------------------------------------------------------- */
+
+.home-note {
+  max-width: var(--measure);
+  padding: 1.5rem 0;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+.home-note code {
+  display: block;
+  margin-top: 0.7rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--court);
+  border-left: 2px solid var(--line-1);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  overflow-x: auto;
+}
+
+@media (max-width: 34rem) {
+  .match-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+
+  .court-mark text {
+    font-size: 16px;
+  }
+}

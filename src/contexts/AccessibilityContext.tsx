@@ -7,8 +7,10 @@ interface AccessibilitySettings {
 
 interface AccessibilityContextType {
   settings: AccessibilitySettings;
+  focusMode: boolean;
   toggleHighContrast: () => void;
   toggleReducedMotion: () => void;
+  toggleFocusMode: () => void;
   announce: (message: string, priority?: 'polite' | 'assertive') => void;
 }
 
@@ -17,6 +19,7 @@ const AccessibilityContext = createContext<AccessibilityContextType | null>(null
 const STORAGE_KEY = 'accessibility_settings';
 
 export function AccessibilityProvider({ children }: { children: ReactNode }) {
+  const [focusMode, setFocusMode] = useState(false);
   const [settings, setSettings] = useState<AccessibilitySettings>(() => {
     // Check localStorage for saved preferences
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -63,8 +66,36 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
     root.classList.toggle('reduced-motion', settings.reducedMotion);
   }, [settings]);
 
+  // Focus mode strips the chrome down to the broadcast and the player views.
+  // Deliberately not persisted: a reload should never strand you without controls.
+  useEffect(() => {
+    document.documentElement.classList.toggle('focus-mode', focusMode);
+  }, [focusMode]);
+
+  // Q is the way back out, since the buttons are hidden.
+  useEffect(() => {
+    if (!focusMode) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== 'q' || e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const target = e.target as HTMLElement | null;
+      if (target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName ?? '')) return;
+
+      e.preventDefault();
+      setFocusMode(false);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [focusMode]);
+
   const toggleHighContrast = () => {
     setSettings(prev => ({ ...prev, highContrast: !prev.highContrast }));
+  };
+
+  const toggleFocusMode = () => {
+    setFocusMode((prev) => !prev);
   };
 
   const toggleReducedMotion = () => {
@@ -84,7 +115,7 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AccessibilityContext.Provider value={{ settings, toggleHighContrast, toggleReducedMotion, announce }}>
+    <AccessibilityContext.Provider value={{ settings, focusMode, toggleHighContrast, toggleReducedMotion, toggleFocusMode, announce }}>
       {/* Live regions for screen reader announcements */}
       <div
         id="aria-live-polite"
@@ -103,6 +134,9 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// The hook belongs with the context it reads; moving it to its own file would only relocate the
+// same non-component export, so fast refresh is opted out of here instead.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAccessibility() {
   const context = useContext(AccessibilityContext);
   if (!context) {

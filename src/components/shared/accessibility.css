@@ -24,78 +24,77 @@
   transform: translateX(-50%);
   z-index: 10000;
   padding: 12px 24px;
-  background: #000;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
+  background: var(--court-deep);
+  color: var(--chalk);
+  font-size: 1rem;
+  font-weight: 400;
   text-decoration: none;
-  border: 3px solid #fff;
-  border-radius: 8px;
+  border: 2px solid var(--ball);
   transition: top 0.2s;
 }
 
 .skip-link:focus {
   top: 16px;
-  outline: 3px solid #007AFF;
+  outline: 2px solid var(--ball);
   outline-offset: 2px;
 }
 
-/* Accessibility Toggle Button */
+/* Accessibility controls: a quiet strip, chalk on court, never a glass pill. */
 .accessibility-toggle {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 1.25rem;
+  right: 1.25rem;
   z-index: 9999;
   display: flex;
-  gap: 8px;
-  padding: 8px;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
+  gap: 1px;
+  background: var(--line-2);
+  border: 1px solid var(--line-2);
 }
 
 .accessibility-btn {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid transparent;
-  border-radius: 8px;
-  color: rgba(255, 255, 255, 0.7);
+  gap: 0.45rem;
+  padding: 0.5rem 0.8rem;
+  background: var(--court-deep);
+  border: none;
+  color: var(--ink-3);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 400;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color var(--step), background var(--step);
 }
 
 .accessibility-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--ink-1);
+  background: var(--court);
 }
 
 .accessibility-btn:focus-visible {
-  outline: 2px solid #007AFF;
-  outline-offset: 2px;
+  outline: 2px solid var(--ball);
+  outline-offset: -2px;
 }
 
 .accessibility-btn--active {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
+  color: var(--ball);
+  background: var(--court);
 }
 
 .accessibility-btn svg {
-  width: 20px;
-  height: 20px;
+  width: 14px;
+  height: 14px;
 }
 
 .accessibility-btn-label {
-  font-size: 9px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: 0;
+}
+
+/* The toggle hides itself in focus mode - Q brings everything back */
+:root.focus-mode .accessibility-toggle {
+  display: none;
 }
 
 /* ═══════════════════════════════════════════════════════════════

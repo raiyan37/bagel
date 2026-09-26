@@ -1,0 +1,174 @@
+/* ---- the small card that tracks a player on the broadcast ---------------- */
+
+.pcard {
+  display: block;
+  width: 180px;
+  padding: 0;
+  text-align: left;
+  background: var(--court-deep);
+  border: 1px solid var(--line-2);
+  color: var(--ink-1);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--step);
+}
+
+.pcard:hover,
+.pcard:focus-visible {
+  border-color: var(--line-1);
+}
+
+.pcard:focus-visible {
+  outline: 2px solid var(--ball);
+  outline-offset: 2px;
+}
+
+.pcard-view {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  overflow: hidden;
+}
+
+/* The player's own accent reads as a court line down the edge of their view. */
+.pcard-view::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--accent);
+}
+
+.pcard-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pcard-foot {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 0 0.5rem;
+  padding: 0.6rem 0.7rem 0.7rem;
+}
+
+.pcard-name {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1.15;
+  color: var(--ink-1);
+}
+
+.pcard-speed {
+  grid-row: span 2;
+  align-self: center;
+  display: flex;
+  align-items: baseline;
+  gap: 0.2rem;
+}
+
+.pcard-speed-value {
+  font-size: 1.35rem;
+  font-weight: 300;
+  color: var(--chalk);
+  font-variant-numeric: tabular-nums;
+}
+
+.pcard-speed-unit,
+.pcard-end {
+  font-size: 0.7rem;
+  color: var(--ink-3);
+}
+
+/* ---- the expanded first-person view ------------------------------------- */
+
+.pov {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  background: rgba(3, 17, 24, 0.82);
+}
+
+.pov-panel {
+  width: min(56rem, 100%);
+  background: var(--court-deep);
+  border: 1px solid var(--line-1);
+  border-top: 2px solid var(--accent);
+}
+
+.pov-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+}
+
+.pov-name {
+  font-size: 1.5rem;
+  color: var(--chalk);
+}
+
+.pov-end {
+  margin-top: 0.15rem;
+  font-size: 0.82rem;
+  color: var(--ink-3);
+}
+
+.pov-close {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--ink-2);
+  border: 1px solid var(--line-2);
+  transition: color var(--step), border-color var(--step);
+}
+
+.pov-close:hover {
+  color: var(--chalk);
+  border-color: var(--line-1);
+}
+
+.pov-close svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pov-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  object-fit: contain;
+}
+
+.pov-stats {
+  display: flex;
+  gap: 2.5rem;
+  padding: 1.1rem 1.25rem 1.3rem;
+}
+
+.pov-stat-value {
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--chalk);
+  font-variant-numeric: tabular-nums;
+}
+
+.pov-stat-label {
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}

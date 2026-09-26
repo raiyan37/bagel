@@ -1,100 +1,85 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ProcessingAnimation, ProcessingStatus } from '../components/processing/ProcessingAnimation';
+import { AsciiBagel } from '../components/processing/AsciiBagel';
 import { AccessibilityToggle } from '../components/shared/AccessibilityToggle';
-import '../components/processing/processing-glass.css';
+import '../components/processing/processing.css';
 
-const statusMessages = [
-  'Initializing neural tracking...',
-  'Detecting player positions...',
-  'Calibrating POV cameras...',
-  'Processing depth mapping...',
-  'Synchronizing feeds...',
-  'Stream ready',
+/* The pipeline has already produced these artifacts; this screen is the handover. */
+const stages = [
+  'Reading the clip',
+  'Solving the court',
+  'Estimating depth',
+  'Building the point cloud',
+  'Placing the player cameras',
+  'Ready',
 ];
 
-const DURATION = 30000; // 30 seconds total
+const thresholds = [0, 15, 35, 55, 75, 95];
+const DURATION = 6000;
 const STORAGE_KEY = 'processing_start_time';
+
+function stageIndexFor(progress: number): number {
+  let index = 0;
+  for (let i = 0; i < thresholds.length; i += 1) {
+    if (progress >= thresholds[i]) index = i;
+  }
+  return index;
+}
 
 export function ProcessingPage() {
   const navigate = useNavigate();
   const { gameId } = useParams<{ gameId: string }>();
   const [progress, setProgress] = useState(0);
-  const [messageIndex, setMessageIndex] = useState(0);
   const startTimeRef = useRef<number>(0);
+  const current = stageIndexFor(progress);
 
   useEffect(() => {
-    // Check if we have a stored start time, otherwise create one
-    const storedStartTime = sessionStorage.getItem(`${STORAGE_KEY}_${gameId}`);
-    if (storedStartTime) {
-      startTimeRef.current = parseInt(storedStartTime, 10);
+    const stored = sessionStorage.getItem(`${STORAGE_KEY}_${gameId}`);
+    if (stored) {
+      startTimeRef.current = parseInt(stored, 10);
     } else {
       startTimeRef.current = Date.now();
       sessionStorage.setItem(`${STORAGE_KEY}_${gameId}`, startTimeRef.current.toString());
     }
 
-    const updateProgress = () => {
-      const elapsed = Date.now() - startTimeRef.current;
-      const newProgress = Math.min((elapsed / DURATION) * 100, 100);
-      setProgress(newProgress);
-    };
-
-    // Update immediately
-    updateProgress();
-
-    // Then update every 50ms
-    const progressInterval = setInterval(updateProgress, 50);
-
-    return () => clearInterval(progressInterval);
+    const update = () => setProgress(Math.min(((Date.now() - startTimeRef.current) / DURATION) * 100, 100));
+    update();
+    const interval = setInterval(update, 50);
+    return () => clearInterval(interval);
   }, [gameId]);
 
   useEffect(() => {
-    // Update message based on progress
-    const messageThresholds = [0, 15, 35, 55, 75, 95];
-    const newIndex = messageThresholds.findIndex(
-      (threshold, i) =>
-        progress >= threshold &&
-        (i === messageThresholds.length - 1 || progress < messageThresholds[i + 1])
-    );
-    if (newIndex !== -1 && newIndex !== messageIndex) {
-      setMessageIndex(newIndex);
-    }
-  }, [progress, messageIndex]);
-
-  useEffect(() => {
-    // Navigate to stream when complete
-    if (progress >= 100) {
-      const timeout = setTimeout(() => {
-        // Clear the stored start time
-        sessionStorage.removeItem(`${STORAGE_KEY}_${gameId}`);
-        navigate(`/stream/${gameId}`);
-      }, 500);
-      return () => clearTimeout(timeout);
-    }
+    if (progress < 100) return;
+    const timeout = setTimeout(() => {
+      sessionStorage.removeItem(`${STORAGE_KEY}_${gameId}`);
+      navigate(`/stream/${gameId}`);
+    }, 500);
+    return () => clearTimeout(timeout);
   }, [progress, navigate, gameId]);
 
   return (
-    <div className="processing-page" role="main" aria-label="Loading stream">
-      {/* Full screen neural network background */}
-      <div className="processing-canvas-wrapper" aria-hidden="true">
-        <ProcessingAnimation />
-      </div>
+    <div className="loading" role="main" aria-label="Opening the match">
+      <div className="loading-inner">
+        <AsciiBagel />
 
-      {/* Centered content overlay */}
-      <div className="processing-container">
-        <div className="processing-content">
-          <header className="processing-header">
-            <div className="processing-brand">
-              <span className="processing-brand-title">Project Horizon</span>
-            </div>
-          </header>
-
-          <ProcessingStatus
-            progress={progress}
-            message={statusMessages[messageIndex]}
-          />
-
-          <p className="processing-hint" aria-live="polite">Preparing immersive experience</p>
+        <div className="loading-stages">
+          <span className="wordmark wordmark--small">bagel</span>
+          <ol className="stage-list">
+            {stages.map((stage, i) => (
+              <li
+                key={stage}
+                className={`stage ${i < current ? 'stage--done' : ''} ${i === current ? 'stage--now' : ''}`}
+              >
+                {stage}
+              </li>
+            ))}
+          </ol>
+          <p className="sr-only" aria-live="polite">
+            {stages[current]}
+          </p>
+          <span className="loading-rule" aria-hidden="true">
+            <span className="loading-rule-fill" style={{ transform: `scaleX(${progress / 100})` }} />
+          </span>
         </div>
       </div>
 

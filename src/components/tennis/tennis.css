@@ -1,0 +1,119 @@
+/* The free-camera panel: the Viser viewer, framed like everything else. */
+
+.freecam {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  background: rgba(3, 17, 24, 0.82);
+}
+
+.freecam-panel {
+  width: min(75rem, 100%);
+  height: min(48rem, 86vh);
+  display: flex;
+  flex-direction: column;
+  background: var(--court-deep);
+  border: 1px solid var(--line-1);
+  overflow: hidden;
+}
+
+.freecam-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid var(--line-2);
+}
+
+.freecam-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--chalk);
+}
+
+.freecam-tabs {
+  display: flex;
+  gap: 1px;
+  flex: 1;
+  margin-left: 0.5rem;
+}
+
+.freecam-tabs button {
+  padding: 0.35rem 0.7rem;
+  background: none;
+  border: 1px solid var(--line-2);
+  color: var(--ink-3);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: color var(--step), border-color var(--step);
+}
+
+.freecam-tabs button:hover {
+  color: var(--ink-1);
+}
+
+.freecam-tabs button[aria-selected='true'] {
+  color: var(--ball);
+  border-color: var(--ball);
+}
+
+.freecam-link {
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  text-decoration: none;
+  border-bottom: 1px solid var(--line-1);
+  transition: color var(--step);
+}
+
+.freecam-link:hover {
+  color: var(--chalk);
+}
+
+.freecam-frame,
+.freecam-video {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  background: #000;
+  object-fit: contain;
+}
+
+.freecam-hint {
+  padding: 0.6rem 1.1rem;
+  border-top: 1px solid var(--line-2);
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+/* ---- stream loading and error states ------------------------------------ */
+
+.stream-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 100vh;
+  padding: var(--gutter);
+  text-align: center;
+  color: var(--ink-2);
+}
+
+.stream-status p:first-child {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--chalk);
+}
+
+.stream-status code {
+  display: inline-block;
+  margin-top: 0.3rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--court);
+  font-size: 0.8rem;
+}

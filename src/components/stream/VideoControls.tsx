@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import './controls-glass.css';
+import './controls.css';
 
 interface VideoControlsProps {
   currentTime: number;

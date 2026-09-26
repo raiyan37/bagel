@@ -30,3 +30,14 @@ venv/
 
 # ML model weights
 *.pt
+
+# Python pipeline
+__pycache__/
+*.egg-info/
+.pytest_cache/
+pipeline/.venv/
+pipeline/.env
+pipeline/data/
+
+# Generated match media (written by `horizon export`)
+public/matches/
