@@ -12,13 +12,13 @@ Bagel is a proof-of-concept for **first-person sports viewing**: taking a normal
 
 ## How it works
 
-**Frontend** — React 19 + TypeScript + Vite, with React Router for the flow between a match list, a "processing" screen, and the live stream view.
+**Frontend** - React 19 + TypeScript + Vite, with React Router for the flow between a match list, a "processing" screen, and the live stream view.
 
-**Player tracking** — A Python backend (`backend/track_video.py`) runs YOLOv8 object detection with ByteTrack multi-object tracking over the broadcast video, frame-index labels each player, and exports normalized bounding-box coordinates as JSON. The frontend (`usePlayerTracking` hook) reads that track data and positions floating player cards over the video in real time as it plays.
+**Player tracking** - A Python backend (`backend/track_video.py`) runs YOLOv8 object detection with ByteTrack multi-object tracking over the broadcast video, frame-index labels each player, and exports normalized bounding-box coordinates as JSON. The frontend (`usePlayerTracking` hook) reads that track data and positions floating player cards over the video in real time as it plays.
 
-**AI scene understanding** — A separate preprocessing pipeline (`preprocessing/`) uses TwelveLabs' Pegasus video-understanding model (via Amazon Bedrock) to describe the clip and identify the main subject, and Gemini to localize that person in frame — early experiments toward automating what's currently hand-tuned player/track mapping.
+**AI scene understanding** - A separate preprocessing pipeline (`preprocessing/`) uses TwelveLabs' Pegasus video-understanding model (via Amazon Bedrock) to describe the clip and identify the main subject, and Gemini to localize that person in frame — early experiments toward automating what's currently hand-tuned player/track mapping.
 
-**Accessibility** — first-class support rather than an afterthought: a high-contrast mode, a reduced-motion mode, full keyboard navigation with visible focus states, and ARIA live-region announcements for in-game events (e.g. goals), all respecting the user's OS-level `prefers-reduced-motion` / `prefers-contrast` settings and persisting choices in `localStorage`. See [`accessibility.md`](accessibility.md).
+**Accessibility** - first-class support rather than an afterthought: a high-contrast mode, a reduced-motion mode, full keyboard navigation with visible focus states, and ARIA live-region announcements for in-game events (e.g. goals), all respecting the user's OS-level `prefers-reduced-motion` / `prefers-contrast` settings and persisting choices in `localStorage`. See [`accessibility.md`](accessibility.md).
 
 ## Tech stack
 
