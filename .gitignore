@@ -37,7 +37,10 @@ __pycache__/
 .pytest_cache/
 pipeline/.venv/
 pipeline/.env
-pipeline/data/
+pipeline/data/*
+!pipeline/data/ao/
 
-# Generated match media (written by `horizon export`)
-public/matches/
+# Generated match media (written by `horizon export`); the `ao` sample ships with the repo
+public/matches/*
+!public/matches/index.json
+!public/matches/ao/

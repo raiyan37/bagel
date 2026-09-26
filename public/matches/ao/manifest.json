@@ -1,0 +1,33 @@
+{
+  "id": "ao",
+  "title": "Near player vs Far player",
+  "competition": "Tennis",
+  "summary": "",
+  "score": "",
+  "fps": 25.0,
+  "frameCount": 105,
+  "width": 1280,
+  "height": 720,
+  "video": "main.mp4",
+  "tracks": "tracks.json",
+  "players": [
+    {
+      "id": "near",
+      "name": "Near player",
+      "description": "",
+      "color": "#3B82F6",
+      "pov": "pov_near.mp4",
+      "statureM": 1.78
+    },
+    {
+      "id": "far",
+      "name": "Far player",
+      "description": "",
+      "color": "#F97316",
+      "pov": "pov_far.mp4",
+      "statureM": 1.62
+    }
+  ],
+  "freeCam": null,
+  "viewerUrl": "http://localhost:8080"
+}

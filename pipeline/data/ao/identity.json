@@ -1,0 +1,24 @@
+{
+  "players": {
+    "near": {
+      "role": "near",
+      "name": "Near player",
+      "description": "",
+      "track_id": 1,
+      "source": "heuristic",
+      "box": null
+    },
+    "far": {
+      "role": "far",
+      "name": "Far player",
+      "description": "",
+      "track_id": 7,
+      "source": "heuristic",
+      "box": null
+    }
+  },
+  "score": "",
+  "summary": "",
+  "frame_index": 0,
+  "warnings": []
+}

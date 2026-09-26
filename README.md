@@ -10,20 +10,142 @@
 
 Bagel turns a single broadcast tennis clip into something you can watch from *inside* the point: follow a rally through either player's eyes, or put a free camera anywhere on court.
 
+The repo ships with a processed sample match (`ao`), so you can try everything without a GPU or API keys.
+
+## Quick start (about 5 minutes)
+
+Commands are for **Windows PowerShell**. macOS/Linux notes follow the steps.
+
+### 1. Install the tools
+
+You need [Git](https://git-scm.com/downloads), [Node.js 24](https://nodejs.org/) and [uv](https://docs.astral.sh/uv/) (it downloads Python for you). To install uv:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Close and reopen your terminal afterwards so `uv` is on your PATH.
+
+### 2. Get the code and install dependencies
+
+Run this once, from wherever you keep projects:
+
+```powershell
+git clone https://github.com/raiyan37/bagel.git
+cd bagel
+npm install
+cd pipeline
+uv venv --python 3.11 .venv
+uv pip install --python .venv\Scripts\python.exe -e ".[viewer]"
+cd ..
+```
+
+### 3. Run it
+
+You need **two terminals**, both opened in the `bagel` folder.
+
+**Terminal 1: 3D viewer**
+
+```powershell
+cd pipeline
+.venv\Scripts\python -m horizon view --match-id ao
+```
+
+Wait for `Viewer running at http://localhost:8080`, then leave it running.
+
+**Terminal 2: web app**
+
+```powershell
+npm run dev
+```
+
+Open **http://localhost:5173** and pick the match. The **Free camera** button shows the 3D viewer inside the app; it stays black if terminal 1 isn't running.
+
+Press `Ctrl+C` in each terminal to stop.
+
+**macOS / Linux:** use `.venv/bin/python` everywhere this README says `.venv\Scripts\python` or `.venv\Scripts\python.exe`.
+
+## Using the 3D viewer
+
+- **Views** jumps to the broadcast camera or either player's eyes.
+- Drag the white gizmo to place the free camera, or use **Snap to near/far player**.
+- **Follow** attaches the camera to a player: `eyes` is first person, `chase` is behind and above.
+- **Look through free camera** shows its view live.
+- **Export clip** writes `free_cam.mp4`. Run `.venv\Scripts\python -m horizon export --match-id ao` to show it in the web app's Free camera panel.
+
+## Process your own clip
+
+This needs the full install, a GPU (strongly recommended) and API keys.
+
+### Extra requirements
+
+- Windows 10/11 with an NVIDIA GPU (developed on an RTX 3060 Ti, 8 GB). A CPU works but is slow.
+- API keys, used only for player identification:
+
+| Service | Used for | Setting in `pipeline\.env` |
+|---|---|---|
+| AWS Bedrock, with model access to **TwelveLabs Pegasus 1.2** in `us-east-1` | Video understanding | AWS credentials via `aws configure`, plus `AWS_REGION` |
+| [OpenRouter](https://openrouter.ai/) | Gemini | `OPENROUTER_API_KEY` |
+| Backboard *(optional)* | Orchestration | `BACKBOARD_API_KEY` |
+
+No keys? Add `--orchestrator direct` to skip Backboard, or `--orchestrator none` to skip all AI services.
+
+### Full install
+
+From the `pipeline` folder:
+
+```powershell
+# PyTorch with CUDA 12.8 (drop the --index-url part for CPU only)
+uv pip install --python .venv\Scripts\python.exe torch torchvision --index-url https://download.pytorch.org/whl/cu128
+uv pip install --python .venv\Scripts\python.exe -e ".[ml,viewer,dev]"
+Copy-Item .env.example .env
+```
+
+Fill in the keys in `pipeline\.env`, then check the setup:
+
+```powershell
+.venv\Scripts\python -m horizon doctor
+```
+
+### Run the pipeline
+
+Use one continuous shot from the main broadcast camera: **3–20 s, both players visible, no cuts or zoom.** Pick any match id (lowercase letters, digits, `-`); `myclip` is used below.
+
+```powershell
+.venv\Scripts\python -m horizon all C:\path\to\match.mp4 --match-id myclip --start 12 --duration 10
+```
+
+A calibration window opens on the first frame. Click each keypoint named at the top; the red dot on the mini-court shows where it is.
+
+| Key | Action |
+|---|---|
+| `S` | Skip a keypoint you can't see |
+| `U` | Undo the last click |
+| `Enter` | Solve (needs at least 4 points) |
+
+Check `data\myclip\calibration_preview.jpg`: the red lines should sit on the painted court lines.
+
+When it finishes, the match appears in the web app. View it in 3D with the same id:
+
+```powershell
+.venv\Scripts\python -m horizon view --match-id myclip
+```
+
+Re-running with the same id reuses the saved `calibration.json`. Pass `--recalibrate` if the clip comes from a different camera, angle or match.
+
+To run steps one at a time: `init`, `calibrate`, `track`, `identify`, `players`, `ball`, `reconstruct`, `render`, `export`. See `.venv\Scripts\python -m horizon <step> --help`.
+
 ## How it works
 
-An offline Python pipeline (`pipeline/`) processes one broadcast clip:
+The offline Python pipeline (`pipeline/`):
 
-1. **Court calibration**: you click a few court keypoints; the pipeline solves the broadcast camera.
+1. **Court calibration**: solves the broadcast camera from clicked court keypoints.
 2. **Tracking**: YOLO26-seg + ByteTrack follow every person in frame.
-3. **Player identification**: TwelveLabs Pegasus (Amazon Bedrock) and Gemini (OpenRouter), orchestrated by Backboard, pick out the two players.
+3. **Player identification**: TwelveLabs Pegasus and Gemini, orchestrated by Backboard, pick out the two players.
 4. **3D reconstruction**: Depth Anything V2 lifts the scene into 3D, aligned to the court geometry.
-5. **Rendering**: first-person POV videos are rendered for both players.
+5. **Rendering**: first-person POV videos for both players.
 
-Two apps show the results:
-
-- **3D viewer** (`horizon view`, built on Viser): a free-placement camera at `http://localhost:8080`.
-- **Web app** (`src/`, React 19 + Vite): plays the match back with POV cards pinned above the players and embeds the 3D viewer in its Free camera panel.
+The **3D viewer** (`horizon view`, built on Viser) serves a free camera at `http://localhost:8080`. The **web app** (`src/`, React + Vite) plays the match back with POV cards pinned above the players and embeds the viewer.
 
 Design doc: [`docs/superpowers/specs/2026-09-20-tennis-horizon-design.md`](docs/superpowers/specs/2026-09-20-tennis-horizon-design.md)
 
@@ -37,135 +159,33 @@ Design doc: [`docs/superpowers/specs/2026-09-20-tennis-horizon-design.md`](docs/
 | 3D viewer | Viser |
 | Tooling | npm, uv, ESLint, pytest |
 
-## Requirements
-
-**System**
-
-- Windows 10/11
-- NVIDIA GPU recommended (developed on an RTX 3060 Ti, 8 GB). CPU works but is slow.
-
-**Software**
-
-- [Node.js 24](https://nodejs.org/) + npm
-- [Python 3.11](https://www.python.org/) (3.11 or 3.12 supported)
-- [uv](https://docs.astral.sh/uv/)
-- Git
-
-**API keys** (only needed for player identification)
-
-| Service | Used for | Env var |
-|---|---|---|
-| AWS Bedrock, with model access to **TwelveLabs Pegasus 1.2** in `us-east-1` | Video understanding | AWS credentials via `aws configure`, plus `AWS_REGION` |
-| [OpenRouter](https://openrouter.ai/) | Gemini | `OPENROUTER_API_KEY` |
-| Backboard *(optional)* | Orchestration | `BACKBOARD_API_KEY` |
-
-No keys? Use `--orchestrator direct` to skip Backboard, or `--orchestrator none` to skip all AI services.
-
-## Setup
-
-### 1. Web app
-
-```powershell
-npm install
-```
-
-### 2. Pipeline
-
-```powershell
-cd pipeline
-uv venv --python 3.11 .venv
-
-# PyTorch with CUDA 12.8 (drop --index-url for a CPU-only install)
-uv pip install --python .venv\Scripts\python.exe torch torchvision --index-url https://download.pytorch.org/whl/cu128
-
-# Pipeline + ML models + 3D viewer + test tools
-uv pip install --python .venv\Scripts\python.exe -e ".[ml,viewer,dev]"
-```
-
-### 3. Environment
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Fill in the keys in `pipeline\.env`, then check everything is wired up:
-
-```powershell
-.venv\Scripts\python -m horizon doctor
-```
-
-## Usage
-
-### 1. Process a clip
-
-Use one continuous shot from the main broadcast camera: **3–20 s, both players visible, no cuts or zoom.**
-
-```powershell
-cd pipeline
-.venv\Scripts\python -m horizon all C:\path\to\match.mp4 --match-id demo --start 12 --duration 10
-```
-
-A calibration window opens on the first frame. Click each keypoint named at the top; the red dot on the mini-court shows where it is.
-
-| Key | Action |
-|---|---|
-| `S` | Skip a keypoint you can't see |
-| `U` | Undo the last click |
-| `Enter` | Solve (needs at least 4 points) |
-
-Then open `data\demo\calibration_preview.jpg` and check that the red lines sit on the painted court lines.
-
-Re-running with the same `--match-id` reuses the saved `calibration.json`. Pass `--recalibrate` when the clip comes from a different camera, angle or match.
-
-To run steps individually: `init`, `calibrate`, `track`, `identify`, `players`, `reconstruct`, `render`, `export`. See `python -m horizon <step> --help`.
-
-### 2. Watch it
-
-Run both apps side by side, one per terminal:
-
-```powershell
-# Terminal 1: 3D viewer -> http://localhost:8080
-cd pipeline
-.venv\Scripts\python -m horizon view --match-id demo
-```
-
-```powershell
-# Terminal 2: web app -> http://localhost:5173
-npm run dev
-```
-
-The web app's **Free camera** panel embeds the 3D viewer, so it stays blank until terminal 1 is running.
-
-**In the 3D viewer**
-
-- Drag the white gizmo to place the camera, or use **Snap to near/far player**.
-- **Follow** attaches the camera to a player: `eyes` is first person, `chase` is behind and above.
-- **Look through free camera** shows its view live.
-- **Export clip** writes `free_cam.mp4`. Run `horizon export --match-id demo` to publish it to the web app.
-
 ## Scripts
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Start the web app dev server |
+| `npm run dev` | Start the web app |
 | `npm run build` | Type-check and build for production |
 | `npm run lint` | Lint the web app |
-| `npm test` | Run web app tests (Vitest) |
-| `cd pipeline; .venv\Scripts\python -m pytest -q` | Run pipeline tests |
+| `npm test` | Web app tests |
+| `cd pipeline; .venv\Scripts\python -m pytest -q` | Pipeline tests (needs the full install) |
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| Free camera panel is blank | Start `horizon view --match-id <id>` in a second terminal |
-| `yolo26s-seg.pt` not found | `horizon track --match-id demo --model yolo11s-seg.pt` |
+| `No such file or directory: ...\data\<id>\scene.npz` | That match hasn't been processed. Use `--match-id ao` for the sample, or run the pipeline for your id first |
+| `.venv\Scripts\python` is not recognized | You're not in the `pipeline` folder, or step 2 of the quick start hasn't been run |
+| `uv` is not recognized | Reopen the terminal after installing uv |
+| Free camera panel is black | Start the 3D viewer (terminal 1) and wait for `Viewer running` |
+| Port 8080 already in use | Another viewer is running; close it, or start with `--port 8081` |
+| `yolo26s-seg.pt` not found | `horizon track --match-id myclip --model yolo11s-seg.pt` |
 | OpenRouter 404 / model not found | Set `GEMINI_MODEL_ID` in `pipeline\.env` to a current id from [openrouter.ai/google](https://openrouter.ai/google) |
 | Pegasus `AccessDeniedException` | Enable TwelveLabs Pegasus under Bedrock → Model access for your `AWS_REGION` |
 | Pegasus rejects the clip (>25 MB) | Re-run `horizon init` with a shorter `--duration` or `--max-height 540` |
-| Backboard errors | `horizon identify --match-id demo --orchestrator direct` |
+| Backboard errors | `horizon identify --match-id myclip --orchestrator direct` |
 | Wrong player chosen | Check warnings in `identity.json`; re-run `identify --frame N` on a frame where both players are clearly visible |
-| Calibration RMS > 4 px | `horizon calibrate --match-id demo` and click more keypoints (service-line T's help) |
-| Sparse point cloud | `horizon reconstruct --match-id demo --stride 1 --depth-model depth-anything/Depth-Anything-V2-Base-hf` |
+| Calibration RMS > 4 px | `horizon calibrate --match-id myclip` and click more keypoints (service-line T's help) |
+| Sparse point cloud | `horizon reconstruct --match-id myclip --stride 1 --depth-model depth-anything/Depth-Anything-V2-Base-hf` |
 
 ## Known limitations
 
